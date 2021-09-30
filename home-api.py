@@ -70,7 +70,7 @@ def sun_control():
 
                     the_sun.updateSetting('confirmRaise', 'validateShadeState')
     
-            the_sun.updateSetting(args.condition, 'lastCondition')
+            the_sun.updateSetting(condition, 'lastCondition')
         
         the_sun.updateSetting('true','lastInArea')
 
