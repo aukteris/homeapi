@@ -38,7 +38,7 @@ def sun_control():
     in_area = the_sun.sunInArea(sun_azm, sun_alt, settings['startAzm'], settings['endAzm'], settings['startAlt'], settings['endAlt'])
 
     result = {
-        'status':';success',
+        'status':'success',
         'commands':[]
     }
 
@@ -99,11 +99,11 @@ def console_light():
     }
 
     result = {
-        'status':';success',
+        'status':'success',
         'commands':[tvIdMap[tv_aid]]
     }
 
-    return "hi"
+    return json.dumps(result)
 
 @app.route('/admin')
 def adminPanel():
