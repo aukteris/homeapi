@@ -59,13 +59,13 @@ def sun_control():
     if in_area:
         # raise or lower the blinds depending on the weather
         if condition != settings['lastCondition']:
-            if condition in lowerConditions:
-                if settings['lastCondition'] not in lowerConditions:
+            if condition in the_sun.lowerConditions:
+                if settings['lastCondition'] not in the_sun.lowerConditions:
                     result['commands'].append('closeAll')
 
                     the_sun.updateSetting('confirmClose', 'validateShadeState')
             else:
-                if settings['lastCondition'] in lowerConditions:
+                if settings['lastCondition'] in the_sun.lowerConditions:
                     result['commands'].append('raiseAll')
 
                     the_sun.updateSetting('confirmRaise', 'validateShadeState')
