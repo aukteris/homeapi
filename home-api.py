@@ -22,7 +22,7 @@ def extract_ups():
 
 @app.route('/sun_control')
 def sun_control():
-    conditon = request.args.get('condition')
+    condition = request.args.get('condition')
     shade_state = request.args.get('shade_state')
 
     the_sun = sun_control_master()
