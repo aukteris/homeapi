@@ -1,11 +1,8 @@
 import sqlite3
+from pysolar import solar
 
-class sun_control_master:
+class db_connect:
     def __init__(self):
-        self.lowerConditions = ['Clear','Mostly Clear']
-        self.latitude = 45.466944
-        self.longitude = -122.793056
-
         self.settingDefaults = {
             'lastCondition':'null',
             'validateShadeState':'null',
@@ -17,13 +14,13 @@ class sun_control_master:
             'lastAzm':'null',
             'lastAlt':'null'
         }
-
+        
         # connect to DB and get ready for queries
         self.con = sqlite3.connect('persist.db')
         self.cur = self.con.cursor()
 
         self._init_db()
-    
+
     def _init_db(self):
         self.cur.execute('CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, value TEXT, last_modified TEXT)')
 
@@ -65,6 +62,19 @@ class sun_control_master:
 
         return result
 
+class sun_control_master:
+    def __init__(self):
+        self.alt = None
+        self.azm = None
+        
+        self.lowerConditions = ['Clear','Mostly Clear']
+        self.latitude = 45.466944
+        self.longitude = -122.793056
+
+    def get_pos(self, time):
+        self.alt = solar.get_altitude(self.latitude, self.longitude, time)
+        self.azm = solar.get_azimuth(self.latitude, self.longitude, time)
+
     def sunInArea(self, sunAzm, sunAlt, startAzm, endAzm, startAlt, endAlt):
         result = False
 
@@ -73,3 +83,15 @@ class sun_control_master:
                 result = True
 
         return result
+
+    def validateShadeState(self, validateCommand):
+
+        if validateCommand == 'confirmRaise':
+            if shade_state != '100':
+                return 'raiseAll'
+                            
+        if validateCommand == 'confirmClose':
+            if shade_state != '0':
+                return 'closeAll'
+
+        return None

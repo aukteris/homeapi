@@ -1,0 +1,3 @@
+[submodule "homebridgeUIAPI-python"]
+	path = homebridgeUIAPI-python
+	url = https://github.com/aukteris/homebridgeUIAPI-python.git
