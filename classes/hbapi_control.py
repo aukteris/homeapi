@@ -6,8 +6,8 @@ class hb_authorize:
         self.password = passwd
         self.configFile = config
 
-class set_acc_char_data:
-    def __init__(self, name, chars, session):
+class acc_char_data:
+    def __init__(self, name=None, chars=None, session=None):
         self.name = name
         self.charSet = chars
         self.sessionId = session

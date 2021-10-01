@@ -6,7 +6,7 @@ import sqlite3
 import importlib
 
 from classes.sun_control import sun_control_master, db_connect
-from classes.hbapi_control import hb_authorize, set_acc_char_data
+from classes.hbapi_control import hb_authorize, acc_char_data
 
 hbCliHelper = importlib.import_module('homebridgeUIAPI-python.classes.cliHelper')
 
@@ -39,10 +39,35 @@ def set_acc_char():
     chars = [request.json.get('type'),request.json.get('value')]
     session = request.headers.get('sessionId')
 
-    set_acc_char_payload = set_acc_char_data(name, chars, session)
+    set_acc_char_payload = acc_char_data(name, chars, session)
 
     thisExec = hbCliHelper.cliExecutor()
     result = thisExec.setaccessorychar(set_acc_char_payload)
+
+    return json.dumps(result)
+
+@app.route('/hbapi/getaccessorycharvals', methods=['POST'])
+def get_acc_chars():
+    name = request.json.get('name')
+    chars = [request.json.get('type')]
+    session = request.headers.get('sessionId')
+
+    get_acc_char_payload = acc_char_data(name,chars,session)
+
+    thisExec = hbCliHelper.cliExecutor()
+    result = thisExec.accessorycharvalues(get_acc_char_payload)
+
+    return json.dumps(result)
+
+@app.route('/hbapi/listaccessorychars', methods=['POST'])
+def list_acc_chars():
+    name = request.json.get('name')
+    session = request.headers.get('sessionId')
+
+    list_acc_char_payload = acc_char_data(name,None,session)
+
+    thisExec = hbCliHelper.cliExecutor()
+    result = thisExec.listaccessorychars(list_acc_char_payload)
 
     return json.dumps(result)
 
