@@ -12,12 +12,19 @@ hbCliHelper = importlib.import_module('homebridgeUIAPI-python.classes.cliHelper'
 
 app = Flask(__name__)
 
+############################################
+### USPS Informed Delivery Notifications ###
+############################################
+
 @app.route('/extract_usps')
 def extract_ups():
 
     pass
 
+####################################
 ### Front-end for homebridge API ###
+####################################
+
 @app.route('/hbapi/auth', methods=['POST'])
 def hb_auth():
     host = request.json.get('host')
@@ -71,7 +78,10 @@ def list_acc_chars():
 
     return json.dumps(result)
 
+#################################################
 ### Controls the blinds based on sun position ###
+#################################################
+
 @app.route('/sun_control')
 def sun_control():
     condition = request.args.get('condition')
@@ -97,7 +107,7 @@ def sun_control():
 
     # logic to retry shade commands if the blinds aren't in the correct state
     if settings['validateShadeState'] != 'null' and (condition == settings['lastCondition'] or settings['lastCondition'] == 'null'):
-        validateShades = the_sun.validateShadeState(settings['validateShadeState'])
+        validateShades = the_sun.validateShadeState(settings['validateShadeState'],shade_state)
         
         if validateShades == None:
             db_session.updateSetting('null', 'validateShadeState')
@@ -135,7 +145,10 @@ def sun_control():
 
     return json.dumps(result)
 
+###############################################
 ### Controls the color of the console light ###
+###############################################
+
 @app.route('/console_light')
 def console_light():
     tv_aid = request.args.get('tv_aid')
@@ -154,8 +167,10 @@ def console_light():
 
     return json.dumps(result)
 
+######################
+### Admin panel UI ###
+######################
 
-### Admin panel ###
 @app.route('/')
 def adminPanel():
     return render_template('adminPanel.html', get_settings_url=url_for('.getSettingVals'), save_settings_url=url_for('.saveSettingVals'))

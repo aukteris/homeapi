@@ -84,7 +84,7 @@ class sun_control_master:
 
         return result
 
-    def validateShadeState(self, validateCommand):
+    def validateShadeState(self, validateCommand, shade_state):
 
         if validateCommand == 'confirmRaise':
             if shade_state != '100':
