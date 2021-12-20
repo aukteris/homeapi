@@ -3,6 +3,13 @@ __pycache__
 persist.db
 mhAuth.json
 hbAuth.json
+uspsAuth.json
+sfdcAuth.json
 
 .authStore
 .sessionStore
+
+usps_cache.sqlite
+usps_cookies.pickle
+sfdc_access_token
+sfdc_cache.sqlite

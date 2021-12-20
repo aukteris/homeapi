@@ -5,6 +5,7 @@ import pytz
 import sqlite3
 import importlib
 
+from classes.usps_api_control import USPSApi, SFDCApi, USPSError, SFDCError
 from classes.sun_control import sun_control_master, db_connect
 from classes.hbapi_control import hb_authorize, acc_char_data
 
@@ -12,14 +13,44 @@ hbCliHelper = importlib.import_module('homebridgeUIAPI-python.classes.cliHelper'
 
 app = Flask(__name__)
 
+uspsAuthFile = "./uspsAuth.json"
+sfdcAuthFile = "./sfdcAuth.json"
+
 ############################################
 ### USPS Informed Delivery Notifications ###
 ############################################
 
 @app.route('/extract_usps')
 def extract_ups():
+    
+    with open(uspsAuthFile) as f:
+        uspsCreds = json.loads(f.read())
 
-    pass
+    with open(sfdcAuthFile) as f:
+        sfdcCreds = json.loads(f.read())
+
+    USPS = USPSApi()
+    sesh = USPS.start_session(uspsCreds['username'], uspsCreds['password'])
+    #date = datetime.date(2021, 12, 15)
+    todaysMail = USPS.get_mail(sesh)
+
+    SFDC = SFDCApi()
+    sfdc_sesh = SFDC.get_sfdc_session(sfdcCreds['client_id'], sfdcCreds['client_secret'], sfdcCreds['refresh_token'])
+
+    for mail in todaysMail:
+        r = USPS.download_image(sesh, mail['image'])
+
+        mailId = SFDC.new_mail_item(sfdc_sesh, mail)
+        SFDC.upload_mail_image(sfdc_sesh, mail, mailId, r.content)
+
+    if len(todaysMail) > 0:
+        note = str(len(todaysMail)) + ' mail incoming'
+
+        SFDC.send_notification(sfdc_sesh, note)
+
+        return note
+    else:
+        return('no mail')
 
 ####################################
 ### Front-end for homebridge API ###

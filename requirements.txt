@@ -5,3 +5,5 @@ gunicorn
 flask
 greenlet
 gevent
+pickle
+bs4
