@@ -115,11 +115,13 @@ def list_acc_chars():
 
 @app.route('/sun_control')
 def sun_control():
-    condition = request.args.get('condition')
-    shade_state = request.args.get('shade_state')
-
     the_sun = sun_control_master()
     db_session = db_connect()
+
+    db_session.logCondition(request.args.get('condition'))
+
+    condition = db_session.topConditionFromHistory()
+    shade_state = request.args.get('shade_state')
 
     settings = db_session.getSettings()
     now = datetime.datetime.now(tz=pytz.timezone('US/Pacific'))

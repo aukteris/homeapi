@@ -12,7 +12,8 @@ class db_connect:
             'endAlt':15,
             'lastInArea':'false',
             'lastAzm':'null',
-            'lastAlt':'null'
+            'lastAlt':'null',
+            'conditionHistoryLength':5
         }
         
         # connect to DB and get ready for queries
@@ -23,6 +24,7 @@ class db_connect:
 
     def _init_db(self):
         self.cur.execute('CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, value TEXT, last_modified TEXT)')
+        self.cur.execute('CREATE TABLE IF NOT EXISTS conditionHistory (id INTEGER PRIMARY KEY AUTOINCREMENT, condition TEXT, timestamp TEXT)')
 
         for s in self.settingDefaults:
             values = {"settingName":s,"defaultValue":self.settingDefaults[s]}
@@ -61,6 +63,33 @@ class db_connect:
                 result[r[0]] = int(r[1]) if r[1].isdigit() else r[1]
 
         return result
+
+    def logCondition(self, condition):
+        self.cur.execute('INSERT INTO conditionHistory (condition, timestamp) VALUES(?, datetime(\'now\'))', (condition,))
+        self.con.commit()
+
+        self.cur.execute('SELECT value FROM settings WHERE name = \'conditionHistoryLength\'')
+        rs = self.cur.fetchall() 
+
+        histLengthMax = int(rs[0][0])
+
+        self.cur.execute('SELECT COUNT(*) FROM conditionHistory')
+        rs = self.cur.fetchall()
+
+        currentHistLength = int(rs[0][0])
+
+        if (currentHistLength > histLengthMax):
+            deleteCount = currentHistLength - histLengthMax
+
+            self.cur.execute('DELETE FROM conditionHistory ORDER BY timestamp ASC LIMIT :count', {'count':deleteCount})
+            self.con.commit()
+    
+    def topConditionFromHistory(self):
+        self.cur.execute('SELECT condition, COUNT(*) as histCount FROM conditionHistory GROUP BY condition ORDER BY histCount DESC')
+        rs = self.cur.fetchall()
+
+        return rs[0][0]
+
 
 class sun_control_master:
     def __init__(self):

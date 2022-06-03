@@ -1,70 +1,67 @@
 <html>
     <head>
-        <title>Home Automation Scheduler - Admin</title>
+        <title>Home Automation</title>
         <script type="application/javascript">
             const get_settings_url = "{{get_settings_url}}"
             const save_settings_url = "{{save_settings_url}}"
-            const Http = new XMLHttpRequest();
-
-            function onLoad() {
-                Http.open("GET", get_settings_url);
-                Http.onreadystatechange = function() {
-                    if (Http.readyState === XMLHttpRequest.DONE && Http.status === 200) {
-                        response = JSON.parse(Http.responseText);
-
-                        document.getElementsByName('startAzm')[0].value = response['startAzm'];
-                        document.getElementsByName('endAzm')[0].value = response['endAzm'];
-                        document.getElementsByName('startAlt')[0].value = response['startAlt'];
-                        document.getElementsByName('endAlt')[0].value = response['endAlt'];
-
-                        document.getElementById('lastAzm').innerHTML = response['lastAzm'];
-                        document.getElementById('lastAlt').innerHTML = response['lastAlt'];
-                        document.getElementById('lastCondition').innerHTML = response['lastCondition'];
-                        document.getElementById('validateShadeState').innerHTML = response['validateShadeState'];
-                        document.getElementById('lastInArea').innerHTML = response['lastInArea'];
-                    }
-                }
-                Http.send();
-            }
-
-            function saveSettings() {
-                let startAzm = document.getElementsByName('startAzm')[0].value;
-                let endAzm = document.getElementsByName('endAzm')[0].value;
-                let startAlt = document.getElementsByName('startAlt')[0].value;
-                let endAlt = document.getElementsByName('endAlt')[0].value;
-
-                let queryString = `?startAzm=${startAzm}&endAzm=${endAzm}&startAlt=${startAlt}&endAlt=${endAlt}`
-                let full_save_settings_url = save_settings_url + queryString;
-
-                Http.open("GET", full_save_settings_url);
-                Http.onreadystatechange = function() {
-                    if (Http.readyState === XMLHttpRequest.DONE && Http.status === 200) {
-                        alert('Saved Successfully')
-                    }
-                }
-                Http.send();
-            }
-            
         </script>
+        <script src="{{ url_for('static',filename='adminPanel.js') }}"> </script>
+        <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles/adminPanel.css') }}">
+        <meta name="viewport" content="user-scalable=no,width=device-width,initial-scale=1.0">
     </head>
     <body onload="onLoad()">
-        <h1>Scheduler - Admin Panel</h1>
+        <h1>Kurtz Home Admin Panel</h1>
         <h2>Solar Shades</h2>
-        <h3>Status</h3>
-        <p>
-            lastAzm: <b><span id="lastAzm"></span></b><br>
-            lastAlt: <b><span id="lastAlt"></span></b><br>
-            lastCondition: <b><span id="lastCondition"></span></b><br>
-            validateShadeState: <b><span id="validateShadeState"></span></b><br>
-            lastInArea: <b><span id="lastInArea"></span></b>
-        </p>
-        <h3>Paramters</h3>
-        <p>
-            Morning Azimuth (startAzm):<input type="text" name="startAzm"/><br>
-            Afternoon Azimuth (endAzm):<input type="text" name="endAzm"/><br>
-            Morning Altitude (startAlt):<input type="text" name="startAlt"/><br>
-            Afternoon Altitude (startAlt):<input type="text" name="endAlt"/><br>
-            <button name="saveSolar" onclick="saveSettings()">Save</button>
-        </p>
+        <div class="section">
+            <h3>Status</h3>
+            <p>
+                <table cellspacing="5">
+                    <tr>
+                        <td class="labelCell">lastAzm</td><td><b><span id="lastAzm"></span></b></td>
+                    </tr>
+                    <tr>
+                        <td class="labelCell">lastAlt</td><td><b><span id="lastAlt"></span></b></td>
+                    </tr>
+                    <tr>
+                        <td class="labelCell">lastCondition</td><td><b><span id="lastCondition"></span></b></td>
+                    </tr>
+                    <tr>
+                        <td class="labelCell">validateShadeState</td><td><b><span id="validateShadeState"></span></b></td>
+                    </tr>
+                    <tr>
+                        <td class="labelCell">lastInArea</td><td><b><span id="lastInArea"></span></b></td>
+                    </tr>                    
+                </table>
+            </p>
+        </div>
+        <div class="section">
+            <h3>Paramters</h3>
+            <p>
+                <table>
+                    <tr>
+                        <td>Morning Azimuth (startAzm)</td><td><input type="text" name="startAzm"/></td>
+                    </tr>
+                    <tr>
+                        <td>Morning Altitude (startAlt)</td><td><input type="text" name="startAlt"/></td>
+                    </tr>
+                    <tr>
+                        <td>Afternoon Azimuth (endAzm)</td><td><input type="text" name="endAzm"/></td>
+                    </tr>
+                    <tr>
+                        <td>Afternoon Altitude (endAlt)</td><td><input type="text" name="endAlt"/></td>
+                    </tr>
+                    <tr>
+                        <td>History Length for Condition Averages (conditionHistoryLength)</td><td><input type="text" name="conditionHistoryLength"/></td>
+                    </tr>
+                </table>
+                <button name="saveSolar" onclick="saveSettings()">Save</button>
+            </p>
+        </div>
+        <div class="section">
+            <h3>Condition History</h3>
+            <p>
+                
+            </p>
+        </div>
     </body>
 </html>

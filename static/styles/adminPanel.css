@@ -1,0 +1,45 @@
+html {
+    background-color:#0a0007;
+    color:#01558a;
+    font-family: Helvetica Neue, Helvetica, sans-serif 
+}
+
+div.section {
+    border-radius: 19px;
+    border-color: rgb(0, 112, 93);
+    border-width: 1px;
+    border-style: solid;
+    padding: 0 16px 0 16px;
+    margin-bottom: 10;
+    background-color: rgb(0, 29, 24);
+}
+
+input {
+    color:white;
+    background-color: #0a0007;
+    border-color: #01558a;
+    border-radius: 10px;
+    padding:4px;
+    border-width: 1;
+    border-style: solid;
+}
+
+button {
+    color: white;
+    background-color:#01558a;
+    border-radius: 10px;
+    border-width: 0;
+    padding: 5 20 5 20;
+}
+
+table {
+    border-width: 0;
+}
+
+td {
+    text-align: left;
+}
+
+td.labelCell {
+    text-align: right;
+}
