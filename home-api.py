@@ -206,7 +206,7 @@ def console_light():
 
 @app.route('/')
 def adminPanel():
-    return render_template('adminPanel.html', get_settings_url=url_for('.getSettingVals'), save_settings_url=url_for('.saveSettingVals'))
+    return render_template('adminPanel.html', get_settings_url=url_for('.getSettingVals'), save_settings_url=url_for('.saveSettingVals'), condition_history_url=url_for('.getConditionHistory'))
 
 @app.route('/getSettingVals')
 def getSettingVals():
@@ -232,6 +232,7 @@ def saveSettingVals():
     updates['endAzm'] = request.args.get('endAzm')
     updates['startAlt'] = request.args.get('startAlt')
     updates['endAlt'] = request.args.get('endAlt')
+    updates['conditionHistoryLength'] = request.args.get('conditionHistoryLength')
 
     con = sqlite3.connect('persist.db')
     cur = con.cursor()
@@ -243,6 +244,18 @@ def saveSettingVals():
     con.close()
 
     return "success"
+
+@app.route('/getConditionHistory')
+def getConditionHistory():
+    con = sqlite3.connect('persist.db')
+    cur = con.cursor()
+
+    cur.execute('SELECT condition, timestamp FROM conditionHistory ORDER BY timestamp DESC')
+    rs = cur.fetchall()
+
+    con.close()
+
+    return json.dumps(rs)
 
 if __name__ == "__main__":
     app.run(threaded=True)
