@@ -1,10 +1,10 @@
 const Http = new XMLHttpRequest();
 
 function onLoad() {
-    loadSettings(loadHistory);
+    loadSettings();
 }
 
-function loadSettings(cb) {
+function loadSettings() {
     Http.open("GET", get_settings_url);
     Http.onreadystatechange = function() {
         if (Http.readyState === XMLHttpRequest.DONE && Http.status === 200) {
@@ -21,11 +21,11 @@ function loadSettings(cb) {
             document.getElementById('lastCondition').innerHTML = response['lastCondition'];
             document.getElementById('validateShadeState').innerHTML = response['validateShadeState'];
             document.getElementById('lastInArea').innerHTML = response['lastInArea'];
-            cb();
+            
+            loadHistory();
         }
     }
     Http.send();
-    
 }
 
 function loadHistory() {
@@ -45,9 +45,53 @@ function loadHistory() {
                 timestampCell.innerHTML = response[row][1];
             }
 
+            loadConditions();
         }
     }
     Http.send();
+}
+
+function loadConditions() {
+    Http.open("GET", distinct_conditions_url);
+    Http.onreadystatechange = function() {
+        if (Http.readyState === XMLHttpRequest.DONE && Http.status === 200) {
+            response = JSON.parse(Http.responseText);
+
+            let closeBlindsSelect = document.getElementById("closeBlindsCon");
+            let openBlindsSelect = document.getElementById("openBlindsCon");
+
+            for (let row in response) {
+                var opt = document.createElement('option');
+                opt.value = response[row][0];
+                opt.innerHTML = response[row][0];
+                
+                if (response[row][1] == "1") closeBlindsSelect.appendChild(opt); else openBlindsSelect.appendChild(opt);
+            }
+        }
+    }
+    Http.send();
+}
+
+function moveToOpen() {
+    let closedBlindsSel = document.getElementById('closeBlindsCon');
+    let openBlindsSel = document.getElementById('openBlindsCon');
+
+    for (let option = closedBlindsSel.length - 1; option > -1 ; option--) {
+        if (closedBlindsSel[option].selected) {
+            openBlindsSel.appendChild(closedBlindsSel[option]);
+        }
+    }
+}
+
+function moveToClose() {
+    let closedBlindsSel = document.getElementById('closeBlindsCon');
+    let openBlindsSel = document.getElementById('openBlindsCon');
+
+    for (let option = openBlindsSel.length - 1; option > -1 ; option--) {
+        if (openBlindsSel[option].selected) {
+            closedBlindsSel.appendChild(openBlindsSel[option]);
+        }
+    }
 }
 
 function saveSettings() {
@@ -57,14 +101,32 @@ function saveSettings() {
     let endAlt = document.getElementsByName('endAlt')[0].value;
     let conditionHistoryLength = document.getElementsByName('conditionHistoryLength')[0].value;
 
-    let queryString = `?startAzm=${startAzm}&endAzm=${endAzm}&startAlt=${startAlt}&endAlt=${endAlt}&conditionHistoryLength=${conditionHistoryLength}`
-    let full_save_settings_url = save_settings_url + queryString;
+    let payload = {
+        "startAzm":startAzm,
+        "endAzm":endAzm,
+        "startAlt":startAlt,
+        "endAlt":endAlt,
+        "conditionHistoryLength":conditionHistoryLength,
+        "distinctConditions":{}
+    };
+    
+    let closedBlindsSel = document.getElementById('closeBlindsCon');
+    let openBlindsSel = document.getElementById('openBlindsCon');
 
-    Http.open("GET", full_save_settings_url);
+    for (let option = openBlindsSel.length - 1; option > -1 ; option--) {
+        payload['distinctConditions'][openBlindsSel[option].value] = 0;
+    }
+
+    for (let option = closedBlindsSel.length - 1; option > -1 ; option--) {
+        payload['distinctConditions'][closedBlindsSel[option].value] = 1;
+    }
+
+    Http.open("POST", save_settings_url);
+    Http.setRequestHeader("Content-Type", "application/json");
     Http.onreadystatechange = function() {
         if (Http.readyState === XMLHttpRequest.DONE && Http.status === 200) {
             alert('Saved Successfully')
         }
     }
-    Http.send();
+    Http.send(JSON.stringify(payload));
 }

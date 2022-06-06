@@ -5,6 +5,7 @@
             const get_settings_url = "{{get_settings_url}}"
             const save_settings_url = "{{save_settings_url}}"
             const condition_history_url = "{{condition_history_url}}"
+            const distinct_conditions_url = "{{distinct_conditions_url}}"
         </script>
         <script src="{{ url_for('static',filename='adminPanel.js') }}"> </script>
         <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles/adminPanel.css') }}">
@@ -36,7 +37,15 @@
             </p>
         </div>
         <div class="section">
-            <h3>Paramters</h3>
+            <h3>Condition History</h3>
+            <p>
+                <table id="historyTable">
+
+                </table>
+            </p>
+        </div>
+        <div class="section">
+            <h3>Settings</h3>
             <p>
                 <table>
                     <tr>
@@ -54,16 +63,27 @@
                     <tr>
                         <td>History Length for Condition Averages (conditionHistoryLength)</td><td><input type="text" name="conditionHistoryLength"/></td>
                     </tr>
+                    <tr>
+                        <td><h4>Conditon Mapping</h4></td><td></td>
+                    </tr>
+                    <tr>
+                        <td class="labelCell">
+                            Blinds Close<br/>
+                            <select size="7" multiple id="closeBlindsCon">
+
+                            </select><br/>
+                            <button name="sendToOpen" onclick="moveToOpen()">></button>
+                        </td>
+                        <td>
+                            Blinds Open<br/>
+                            <select size="7" multiple id="openBlindsCon">
+
+                            </select><br/>
+                            <button name="sendToClose" onclick="moveToClose()"><</button>
+                        </td>
+                    </tr>
                 </table>
                 <button name="saveSolar" onclick="saveSettings()">Save</button>
-            </p>
-        </div>
-        <div class="section">
-            <h3>Condition History</h3>
-            <p>
-                <table id="historyTable">
-
-                </table>
             </p>
         </div>
     </body>

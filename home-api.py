@@ -115,8 +115,8 @@ def list_acc_chars():
 
 @app.route('/sun_control')
 def sun_control():
-    the_sun = sun_control_master()
     db_session = db_connect()
+    the_sun = sun_control_master()
 
     db_session.logCondition(request.args.get('condition'))
 
@@ -206,7 +206,7 @@ def console_light():
 
 @app.route('/')
 def adminPanel():
-    return render_template('adminPanel.html', get_settings_url=url_for('.getSettingVals'), save_settings_url=url_for('.saveSettingVals'), condition_history_url=url_for('.getConditionHistory'))
+    return render_template('adminPanel.html', get_settings_url=url_for('.getSettingVals'), save_settings_url=url_for('.saveSettingVals'), condition_history_url=url_for('.getConditionHistory'), distinct_conditions_url=url_for('.getDistinctConditions'))
 
 @app.route('/getSettingVals')
 def getSettingVals():
@@ -225,17 +225,22 @@ def getSettingVals():
 
     return json.dumps(result)
 
-@app.route('/saveSettingVals')
+@app.route('/saveSettingVals', methods=["POST"])
 def saveSettingVals():
+    payload = json.loads(request.data)
+
     updates = {}
-    updates['startAzm'] = request.args.get('startAzm')
-    updates['endAzm'] = request.args.get('endAzm')
-    updates['startAlt'] = request.args.get('startAlt')
-    updates['endAlt'] = request.args.get('endAlt')
-    updates['conditionHistoryLength'] = request.args.get('conditionHistoryLength')
+    updates['startAzm'] = payload['startAzm']
+    updates['endAzm'] = payload['endAzm']
+    updates['startAlt'] = payload['startAlt']
+    updates['endAlt'] = payload['endAlt']
+    updates['conditionHistoryLength'] = payload['conditionHistoryLength']
 
     con = sqlite3.connect('persist.db')
     cur = con.cursor()
+
+    for condition in payload['distinctConditions'].keys():
+        cur.execute('UPDATE distinctConditions SET blindsClosed = ? WHERE condition = ?', (payload['distinctConditions'][condition], condition))
 
     for setting in updates:
         cur.execute('UPDATE settings SET value = ?, last_modified = datetime(\'now\') WHERE name = ?', (updates[setting], setting))
@@ -254,6 +259,16 @@ def getConditionHistory():
     rs = cur.fetchall()
 
     con.close()
+
+    return json.dumps(rs)
+
+@app.route('/getDistinctConditions')
+def getDistinctConditions():
+    con = sqlite3.connect('persist.db')
+    cur = con.cursor()
+
+    cur.execute('SELECT condition, blindsClosed FROM distinctConditions ORDER BY condition ASC')
+    rs = cur.fetchall()
 
     return json.dumps(rs)
 
