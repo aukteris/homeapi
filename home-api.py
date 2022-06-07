@@ -145,21 +145,24 @@ def sun_control():
         if validateShades == None:
             db_session.updateSetting('null', 'validateShadeState')
         else:
-            result['commands'].append(validateShades)
+            if settings['commandOverride'] != 1:
+                result['commands'].append(validateShades)
 
     if in_area:
         # raise or lower the blinds depending on the weather
         if condition != settings['lastCondition']:
             if condition in the_sun.lowerConditions:
                 if settings['lastCondition'] not in the_sun.lowerConditions:
-                    result['commands'].append('closeAll')
+                    if settings['commandOverride'] != 1:
+                        result['commands'].append('closeAll')
 
-                    db_session.updateSetting('confirmClose', 'validateShadeState')
+                        db_session.updateSetting('confirmClose', 'validateShadeState')
             else:
                 if settings['lastCondition'] in the_sun.lowerConditions:
-                    result['commands'].append('raiseAll')
+                    if settings['commandOverride'] != 1:
+                        result['commands'].append('raiseAll')
 
-                    db_session.updateSetting('confirmRaise', 'validateShadeState')
+                        db_session.updateSetting('confirmRaise', 'validateShadeState')
     
             db_session.updateSetting(condition, 'lastCondition')
         
@@ -235,6 +238,7 @@ def saveSettingVals():
     updates['startAlt'] = payload['startAlt']
     updates['endAlt'] = payload['endAlt']
     updates['conditionHistoryLength'] = payload['conditionHistoryLength']
+    updates['commandOverride'] = payload['commandOverride']
 
     con = sqlite3.connect('persist.db')
     cur = con.cursor()

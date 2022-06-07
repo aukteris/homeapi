@@ -13,7 +13,8 @@ class db_connect:
             'lastInArea':'false',
             'lastAzm':'null',
             'lastAlt':'null',
-            'conditionHistoryLength':5
+            'conditionHistoryLength':5,
+            'commandOverride':0
         }
 
         self.conditionDefaults = ['Clear','Mostly Clear']
@@ -127,8 +128,8 @@ class sun_control_master:
             conditions.append(row[0])
         
         self.lowerConditions = conditions
-        self.latitude = 45.466944
-        self.longitude = -122.793056
+        self.latitude = 45.46692
+        self.longitude = -122.79286
 
     def get_pos(self, time):
         self.alt = solar.get_altitude(self.latitude, self.longitude, time)

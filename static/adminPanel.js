@@ -22,6 +22,8 @@ function loadSettings() {
             document.getElementById('validateShadeState').innerHTML = response['validateShadeState'];
             document.getElementById('lastInArea').innerHTML = response['lastInArea'];
             
+            if (response['commandOverride'] == 1) document.getElementById('override').checked = true;
+            
             loadHistory();
         }
     }
@@ -100,6 +102,7 @@ function saveSettings() {
     let startAlt = document.getElementsByName('startAlt')[0].value;
     let endAlt = document.getElementsByName('endAlt')[0].value;
     let conditionHistoryLength = document.getElementsByName('conditionHistoryLength')[0].value;
+    let commandOverride = document.getElementById('override').checked == true ? 1 : 0;
 
     let payload = {
         "startAzm":startAzm,
@@ -107,6 +110,7 @@ function saveSettings() {
         "startAlt":startAlt,
         "endAlt":endAlt,
         "conditionHistoryLength":conditionHistoryLength,
+        "commandOverride":commandOverride,
         "distinctConditions":{}
     };
     
