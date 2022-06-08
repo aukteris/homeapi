@@ -111,6 +111,14 @@ class db_connect:
 
         return rs[0][0]
 
+    def topConditionTypeFromHistory(self):
+        self.cur.execute('SELECT blindsClosed, COUNT(timestamp) AS histCount FROM conditionHistory INNER JOIN distinctConditions ON conditionHistory.condition = distinctConditions.condition GROUP BY blindsClosed ORDER BY histCount DESC')
+        rs = self.cur.fetchall()
+
+        retval = "close" if rs[0][0] == 1 else "open"
+
+        return retval
+
 
 class sun_control_master:
     def __init__(self):

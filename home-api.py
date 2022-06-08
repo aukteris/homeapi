@@ -120,7 +120,9 @@ def sun_control():
 
     db_session.logCondition(request.args.get('condition'))
 
-    condition = db_session.topConditionFromHistory()
+    #condition = db_session.topConditionFromHistory()
+    condition = db_session.topConditionTypeFromHistory()
+
     shade_state = request.args.get('shade_state')
 
     settings = db_session.getSettings()
@@ -151,14 +153,14 @@ def sun_control():
     if in_area:
         # raise or lower the blinds depending on the weather
         if condition != settings['lastCondition']:
-            if condition in the_sun.lowerConditions:
-                if settings['lastCondition'] not in the_sun.lowerConditions:
+            if condition == "close":
+                if settings['lastCondition'] != "close":
                     if settings['commandOverride'] != 1:
                         result['commands'].append('closeAll')
 
                         db_session.updateSetting('confirmClose', 'validateShadeState')
             else:
-                if settings['lastCondition'] in the_sun.lowerConditions:
+                if settings['lastCondition'] == "close":
                     if settings['commandOverride'] != 1:
                         result['commands'].append('raiseAll')
 
