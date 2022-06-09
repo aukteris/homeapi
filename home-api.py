@@ -278,5 +278,20 @@ def getDistinctConditions():
 
     return json.dumps(rs)
 
+@app.route('/getTimeSinceLastCheck')
+def getTimeSinceLastCheck():
+    con = sqlite3.connect('persist.db')
+    cur = con.cursor()
+
+    cur.execute('SELECT timestamp, datetime(\'now\') FROM conditionHistory ORDER BY timestamp DESC LIMIT 1')
+    rs = cur.fetchall()
+
+    newestDate = datetime.datetime.strptime(rs[0][0], '%Y-%d-%m %H:%M:%S')
+    nowDate = datetime.datetime.strptime(rs[0][1], '%Y-%d-%m %H:%M:%S')
+
+    difference = nowDate - newestDate
+
+    return json.dumps(difference.total_seconds())
+
 if __name__ == "__main__":
     app.run(threaded=True)
