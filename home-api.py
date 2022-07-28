@@ -31,8 +31,8 @@ def extract_ups():
 
     USPS = USPSApi()
     sesh = USPS.start_session(uspsCreds['username'], uspsCreds['password'])
-    #date = datetime.date(2021, 12, 15)
-    todaysMail = USPS.get_mail(sesh)
+    date = datetime.date(2022, 7, 26)
+    todaysMail = USPS.get_mail(sesh, date)
 
     SFDC = SFDCApi()
     sfdc_sesh = SFDC.get_sfdc_session(sfdcCreds['client_id'], sfdcCreds['client_secret'], sfdcCreds['refresh_token'])
@@ -149,37 +149,36 @@ def sun_control():
         else:
             if settings['commandOverride'] != 1:
                 result['commands'].append(validateShades)
-
-    if in_area:
-        # raise or lower the blinds depending on the weather
-        if condition != settings['lastCondition']:
-            if condition == "close":
-                if settings['lastCondition'] != "close":
-                    if settings['commandOverride'] != 1:
+    
+    if settings['commandOverride'] != 1:
+        if in_area:
+            # raise or lower the blinds depending on the weather
+            if condition != settings['lastCondition']:
+                if condition == "close":
+                    if settings['lastCondition'] != "close":
                         result['commands'].append('closeAll')
 
                         db_session.updateSetting('confirmClose', 'validateShadeState')
-            else:
-                if settings['lastCondition'] == "close":
-                    if settings['commandOverride'] != 1:
+                else:
+                    if settings['lastCondition'] == "close":
                         result['commands'].append('raiseAll')
 
                         db_session.updateSetting('confirmRaise', 'validateShadeState')
-    
-            db_session.updateSetting(condition, 'lastCondition')
         
-        db_session.updateSetting('true','lastInArea')
+                db_session.updateSetting(condition, 'lastCondition')
+            
+            db_session.updateSetting('true','lastInArea')
 
-    else:
-        # if the last update position was within the watch area, raise the blinds
-        if settings['lastInArea'] == 'true':
-            if settings['lastCondition'] != "null":
-                result['commands'].append('raiseAll')
+        else:
+            # if the last update position was within the watch area, raise the blinds
+            if settings['lastInArea'] == 'true':
+                if settings['lastCondition'] != "null":
+                    result['commands'].append('raiseAll')
 
-                db_session.updateSetting('null', 'lastCondition')
-                db_session.updateSetting('confirmRaise', 'validateShadeState')
-        
-        db_session.updateSetting('false','lastInArea')
+                    db_session.updateSetting('null', 'lastCondition')
+                    db_session.updateSetting('confirmRaise', 'validateShadeState')
+            
+                db_session.updateSetting('false','lastInArea')
 
     return json.dumps(result)
 
