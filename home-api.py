@@ -31,11 +31,11 @@ def extract_ups():
 
     USPS = USPSApi()
     sesh = USPS.start_session(uspsCreds['username'], uspsCreds['password'])
-    date = datetime.date(2022, 7, 26)
-    todaysMail = USPS.get_mail(sesh, date)
+    #date = datetime.date(2022, 7, 26)
+    todaysMail = USPS.get_mail(sesh)
 
     SFDC = SFDCApi()
-    sfdc_sesh = SFDC.get_sfdc_session(sfdcCreds['client_id'], sfdcCreds['client_secret'], sfdcCreds['refresh_token'])
+    sfdc_sesh = SFDC.get_sfdc_session(sfdcCreds['client_id'], sfdcCreds['client_secret'], sfdcCreds['refresh_token'], sfdcCreds['domain'])
 
     for mail in todaysMail:
         r = USPS.download_image(sesh, mail['image'])

@@ -170,7 +170,6 @@ class SFDCApi():
     ACCESS_TOKEN_PATH = './sfdc_access_token'
     SFDC_CACHE_NAME = 'sfdc_cache'
 
-    DOMAIN_URL = 'https://kurtz-dev-ed.my.salesforce.com'
     REST_BASE_URL = '/services/data/'
     API_VERSION = 'v52.0'
     CONTENT_VERSION_ENDPOINT = '/sobjects/ContentVersion'
@@ -196,7 +195,7 @@ class SFDCApi():
                         'client_id':session.auth.client_id,
                         'client_secret':session.auth.client_secret,
                         'refresh_token':session.auth.refresh_token}
-        res = requests.post(url=self.DOMAIN_URL + self.REFRESH_TOKEN_ENDPOINT,
+        res = requests.post(url=session.auth.domain + self.REFRESH_TOKEN_ENDPOINT,
                             data=requestData)
 
         if res.status_code == 200:
@@ -216,24 +215,25 @@ class SFDCApi():
                 return function(*args)
         return wrapped
 
-    def get_sfdc_session(self, cid, csec, ref):
+    def get_sfdc_session(self, cid, csec, ref, dom):
 
         class SFDCAuth(AuthBase): 
             """SFDC authorization storage."""
 
-            def __init__(self, client_id, client_secret, refresh_token):
+            def __init__(self, client_id, client_secret, refresh_token, domain):
                 """Init."""
                 self.access_token = None
                 self.client_id = client_id
                 self.client_secret = client_secret
                 self.refresh_token = refresh_token
+                self.domain = domain
 
             def __call__(self, r):
                 """Call is no-op."""
                 return r
 
         session = requests_cache.CachedSession(cache_name=self.SFDC_CACHE_NAME)
-        session.auth = SFDCAuth(cid, csec, ref)
+        session.auth = SFDCAuth(cid, csec, ref, dom)
 
         if os.path.exists(self.ACCESS_TOKEN_PATH):
             session.auth.access_token = self._load_token(self.ACCESS_TOKEN_PATH)
@@ -249,7 +249,7 @@ class SFDCApi():
                     'Content-Type':'application/json'}
         requestData = {'Name':mail_item['id'],
                         'Delivery_Date__c':mail_item['date'].strftime("%Y-%m-%d")}
-        requestUrl = self.DOMAIN_URL + self.REST_BASE_URL + self.API_VERSION + self.MAIL_ENDPOINT
+        requestUrl = session.auth.domain + self.REST_BASE_URL + self.API_VERSION + self.MAIL_ENDPOINT
 
         res = session.post(url = requestUrl,
                             data = json.dumps(requestData),
@@ -269,7 +269,7 @@ class SFDCApi():
         headers = {'Content-Type': 'multipart/form-data; boundary=boundary_string',
                     'Authorization':f'Bearer {session.auth.access_token}'}
         requestData = bytes(head1, 'utf-8') + image_data + bytes(head2, 'utf-8')
-        requestUrl = self.DOMAIN_URL + self.REST_BASE_URL + self.API_VERSION + self.CONTENT_VERSION_ENDPOINT
+        requestUrl = session.auth.domain + self.REST_BASE_URL + self.API_VERSION + self.CONTENT_VERSION_ENDPOINT
 
         res = session.post(url = requestUrl,
                             data = requestData,
@@ -285,7 +285,7 @@ class SFDCApi():
         print('starting flow')
         headers = {'Authorization':f'Bearer {session.auth.access_token}',
                     'Content-Type':'application/json'}
-        requestUrl = self.DOMAIN_URL + self.REST_BASE_URL + self.API_VERSION + self.FLOW_ENDPOINT + 'Send_Mail_Alert'
+        requestUrl = session.auth.domain + self.REST_BASE_URL + self.API_VERSION + self.FLOW_ENDPOINT + 'Send_Mail_Alert'
         requestData = {
             'inputs' : [{
                 'Notification_Body': body
