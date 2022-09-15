@@ -13,6 +13,7 @@ class db_connect:
             'lastInArea':'false',
             'lastAzm':'null',
             'lastAlt':'null',
+            'luxThresh':3000,
             'conditionHistoryLength':5,
             'commandOverride':0
         }

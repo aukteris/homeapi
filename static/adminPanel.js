@@ -14,6 +14,7 @@ function loadSettings() {
             document.getElementsByName('endAzm')[0].value = response['endAzm'];
             document.getElementsByName('startAlt')[0].value = response['startAlt'];
             document.getElementsByName('endAlt')[0].value = response['endAlt'];
+            document.getElementsByName('luxThresh')[0].value = response['luxThresh'];
             document.getElementsByName('conditionHistoryLength')[0].value = response['conditionHistoryLength'];
 
             document.getElementById('lastAzm').innerHTML = response['lastAzm'];
@@ -102,6 +103,7 @@ function saveSettings() {
     let startAlt = document.getElementsByName('startAlt')[0].value;
     let endAlt = document.getElementsByName('endAlt')[0].value;
     let conditionHistoryLength = document.getElementsByName('conditionHistoryLength')[0].value;
+    let luxThresh = document.getElementsByName('luxThresh')[0].value;
     let commandOverride = document.getElementById('override').checked == true ? 1 : 0;
 
     let payload = {
@@ -111,6 +113,7 @@ function saveSettings() {
         "endAlt":endAlt,
         "conditionHistoryLength":conditionHistoryLength,
         "commandOverride":commandOverride,
+        "luxThresh":luxThresh,
         "distinctConditions":{}
     };
     

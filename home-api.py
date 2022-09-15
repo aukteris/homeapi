@@ -117,15 +117,23 @@ def list_acc_chars():
 def sun_control():
     db_session = db_connect()
     the_sun = sun_control_master()
+    settings = db_session.getSettings()
 
-    db_session.logCondition(request.args.get('condition'))
+    # weather broke in iOS 16, can't pass conditions in automation
+    #db_session.logCondition(request.args.get('condition'))
+
+    # as a work around, use lux from the doorbell instead
+    luxString = request.args.get('lux')
+    luxInt = float(luxString.split(" ")[0].replace(",", ""))
+    luxCondition = 'Cloudy' if luxInt < settings['luxThresh'] else 'Clear'
+
+    db_session.logCondition(luxCondition)
 
     #condition = db_session.topConditionFromHistory()
     condition = db_session.topConditionTypeFromHistory()
 
     shade_state = request.args.get('shade_state')
 
-    settings = db_session.getSettings()
     now = datetime.datetime.now(tz=pytz.timezone('US/Pacific'))
 
     # get the altitude and azimuth of the sun
@@ -180,6 +188,7 @@ def sun_control():
             
                 db_session.updateSetting('false','lastInArea')
 
+    print(result)
     return json.dumps(result)
 
 ###############################################
@@ -240,6 +249,7 @@ def saveSettingVals():
     updates['endAlt'] = payload['endAlt']
     updates['conditionHistoryLength'] = payload['conditionHistoryLength']
     updates['commandOverride'] = payload['commandOverride']
+    updates['luxThresh'] = payload['luxThresh']
 
     con = sqlite3.connect('persist.db')
     cur = con.cursor()
