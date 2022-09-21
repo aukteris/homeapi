@@ -4,6 +4,7 @@ import datetime
 import pytz
 import sqlite3
 import importlib
+from noaa_sdk import NOAA
 
 from classes.usps_api_control import USPSApi, SFDCApi, USPSError, SFDCError
 from classes.sun_control import sun_control_master, db_connect
@@ -119,15 +120,22 @@ def sun_control():
     the_sun = sun_control_master()
     settings = db_session.getSettings()
 
+    n = NOAA()
     # weather broke in iOS 16, can't pass conditions in automation
     #db_session.logCondition(request.args.get('condition'))
 
-    # as a work around, use lux from the doorbell instead
-    luxString = request.args.get('lux')
-    luxInt = float(luxString.split(" ")[0].replace(",", ""))
-    luxCondition = 'Cloudy' if luxInt < settings['luxThresh'] else 'Clear'
+    # as a work around, use lux from the doorbell instead (this needs a better sensor to function)
+    #luxString = request.args.get('lux')
+    #luxInt = float(luxString.split(" ")[0].replace(",", ""))
+    #luxCondition = 'Cloudy' if luxInt < settings['luxThresh'] else 'Clear'
+    #db_session.logCondition(luxCondition)
 
-    db_session.logCondition(luxCondition)
+    # get the weather from the government
+    n = NOAA()
+    weatherSample = n.get_observations_by_lat_lon(the_sun.latitude, the_sun.longitude)
+    for obs in weatherSample:
+        db_session.logCondition(obs['textDescription'])
+        break
 
     #condition = db_session.topConditionFromHistory()
     condition = db_session.topConditionTypeFromHistory()
