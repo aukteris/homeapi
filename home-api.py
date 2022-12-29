@@ -120,9 +120,8 @@ def sun_control():
     the_sun = sun_control_master()
     settings = db_session.getSettings()
 
-    n = NOAA()
     # weather broke in iOS 16, can't pass conditions in automation
-    #db_session.logCondition(request.args.get('condition'))
+    db_session.logCondition(request.args.get('condition'))
 
     # as a work around, use lux from the doorbell instead (this needs a better sensor to function)
     #luxString = request.args.get('lux')
@@ -131,11 +130,11 @@ def sun_control():
     #db_session.logCondition(luxCondition)
 
     # get the weather from the government
-    n = NOAA()
-    weatherSample = n.get_observations_by_lat_lon(the_sun.latitude, the_sun.longitude)
-    for obs in weatherSample:
-        db_session.logCondition(obs['textDescription'])
-        break
+    #n = NOAA()
+    #weatherSample = n.get_observations_by_lat_lon(the_sun.latitude, the_sun.longitude)
+    #for obs in weatherSample:
+    #    db_session.logCondition(obs['textDescription'])
+    #    break
 
     #condition = db_session.topConditionFromHistory()
     condition = db_session.topConditionTypeFromHistory()
