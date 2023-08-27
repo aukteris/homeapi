@@ -21,37 +21,40 @@ sfdcAuthFile = "./sfdcAuth.json"
 ### USPS Informed Delivery Notifications ###
 ############################################
 
-@app.route('/extract_usps')
+@app.route('/extract_usps', methods=['GET'])
 def extract_ups():
-    
-    with open(uspsAuthFile) as f:
-        uspsCreds = json.loads(f.read())
+    if request.method == 'GET':
+        
+        with open(uspsAuthFile) as f:
+            uspsCreds = json.loads(f.read())
 
-    with open(sfdcAuthFile) as f:
-        sfdcCreds = json.loads(f.read())
+        with open(sfdcAuthFile) as f:
+            sfdcCreds = json.loads(f.read())
 
-    USPS = USPSApi()
-    sesh = USPS.start_session(uspsCreds['username'], uspsCreds['password'])
-    #date = datetime.date(2022, 7, 26)
-    todaysMail = USPS.get_mail(sesh)
+        USPS = USPSApi()
+        sesh = USPS.start_session(uspsCreds['username'], uspsCreds['password'])
+        #date = datetime.date(2022, 7, 26)
+        todaysMail = USPS.get_mail(sesh)
 
-    SFDC = SFDCApi()
-    sfdc_sesh = SFDC.get_sfdc_session(sfdcCreds['client_id'], sfdcCreds['client_secret'], sfdcCreds['refresh_token'], sfdcCreds['domain'])
+        SFDC = SFDCApi()
+        sfdc_sesh = SFDC.get_sfdc_session(sfdcCreds['client_id'], sfdcCreds['client_secret'], sfdcCreds['refresh_token'], sfdcCreds['domain'])
 
-    for mail in todaysMail:
-        r = USPS.download_image(sesh, mail['image'])
+        for mail in todaysMail:
+            r = USPS.download_image(sesh, mail['image'])
 
-        mailId = SFDC.new_mail_item(sfdc_sesh, mail)
-        SFDC.upload_mail_image(sfdc_sesh, mail, mailId, r.content)
+            mailId = SFDC.new_mail_item(sfdc_sesh, mail)
+            SFDC.upload_mail_image(sfdc_sesh, mail, mailId, r.content)
 
-    if len(todaysMail) > 0:
-        note = str(len(todaysMail)) + ' mail incoming'
+        if len(todaysMail) > 0:
+            note = str(len(todaysMail)) + ' mail incoming'
 
-        SFDC.send_notification(sfdc_sesh, note)
+            SFDC.send_notification(sfdc_sesh, note)
 
-        return note
+            return note
+        else:
+            return('no mail')
     else:
-        return('no mail')
+        return ('', 204)
 
 ####################################
 ### Front-end for homebridge API ###
@@ -114,89 +117,92 @@ def list_acc_chars():
 ### Controls the blinds based on sun position ###
 #################################################
 
-@app.route('/sun_control')
+@app.route('/sun_control', methods=['GET'])
 def sun_control():
-    db_session = db_connect()
-    the_sun = sun_control_master()
-    settings = db_session.getSettings()
+    if request.method == 'GET':
+        db_session = db_connect()
+        the_sun = sun_control_master()
+        settings = db_session.getSettings()
 
-    # weather broke in iOS 16, can't pass conditions in automation
-    db_session.logCondition(request.args.get('condition'))
+        # use condition passed in from iOS Weather
+        db_session.logCondition(request.args.get('condition'))
 
-    # as a work around, use lux from the doorbell instead (this needs a better sensor to function)
-    #luxString = request.args.get('lux')
-    #luxInt = float(luxString.split(" ")[0].replace(",", ""))
-    #luxCondition = 'Cloudy' if luxInt < settings['luxThresh'] else 'Clear'
-    #db_session.logCondition(luxCondition)
+        # alternative approach, use lux from the doorbell instead (this needs a better sensor to function)
+        #luxString = request.args.get('lux')
+        #luxInt = float(luxString.split(" ")[0].replace(",", ""))
+        #luxCondition = 'Cloudy' if luxInt < settings['luxThresh'] else 'Clear'
+        #db_session.logCondition(luxCondition)
 
-    # get the weather from the government
-    #n = NOAA()
-    #weatherSample = n.get_observations_by_lat_lon(the_sun.latitude, the_sun.longitude)
-    #for obs in weatherSample:
-    #    db_session.logCondition(obs['textDescription'])
-    #    break
+        # another alternative approach, get the weather from the government (very slow update frequency)
+        #n = NOAA()
+        #weatherSample = n.get_observations_by_lat_lon(the_sun.latitude, the_sun.longitude)
+        #for obs in weatherSample:
+        #    db_session.logCondition(obs['textDescription'])
+        #    break
 
-    #condition = db_session.topConditionFromHistory()
-    condition = db_session.topConditionTypeFromHistory()
+        #condition = db_session.topConditionFromHistory()
+        condition = db_session.topConditionTypeFromHistory()
 
-    shade_state = request.args.get('shade_state')
+        shade_state = request.args.get('shade_state')
 
-    now = datetime.datetime.now(tz=pytz.timezone('US/Pacific'))
+        now = datetime.datetime.now(tz=pytz.timezone('US/Pacific'))
 
-    # get the altitude and azimuth of the sun
-    the_sun.get_pos(now)
-    db_session.updateSetting(the_sun.alt, 'lastAlt')
-    db_session.updateSetting(the_sun.azm, 'lastAzm')
-    
-    in_area = the_sun.sunInArea(the_sun.azm, the_sun.alt, settings['startAzm'], settings['endAzm'], settings['startAlt'], settings['endAlt'])
-
-    result = {
-        'status':'success',
-        'commands':[]
-    }
-
-    # logic to retry shade commands if the blinds aren't in the correct state
-    if settings['validateShadeState'] != 'null' and (condition == settings['lastCondition'] or settings['lastCondition'] == 'null'):
-        validateShades = the_sun.validateShadeState(settings['validateShadeState'],shade_state)
+        # get the altitude and azimuth of the sun
+        the_sun.get_pos(now)
+        db_session.updateSetting(the_sun.alt, 'lastAlt')
+        db_session.updateSetting(the_sun.azm, 'lastAzm')
         
-        if validateShades == None:
-            db_session.updateSetting('null', 'validateShadeState')
-        else:
-            if settings['commandOverride'] != 1:
-                result['commands'].append(validateShades)
-    
-    if settings['commandOverride'] != 1:
-        if in_area:
-            # raise or lower the blinds depending on the weather
-            if condition != settings['lastCondition']:
-                if condition == "close":
-                    if settings['lastCondition'] != "close":
-                        result['commands'].append('closeAll')
+        in_area = the_sun.sunInArea(the_sun.azm, the_sun.alt, settings['startAzm'], settings['endAzm'], settings['startAlt'], settings['endAlt'])
 
-                        db_session.updateSetting('confirmClose', 'validateShadeState')
-                else:
-                    if settings['lastCondition'] == "close":
+        result = {
+            'status':'success',
+            'commands':[]
+        }
+
+        # logic to retry shade commands if the blinds aren't in the correct state
+        if settings['validateShadeState'] != 'null' and (condition == settings['lastCondition'] or settings['lastCondition'] == 'null'):
+            validateShades = the_sun.validateShadeState(settings['validateShadeState'],shade_state)
+            
+            if validateShades == None:
+                db_session.updateSetting('null', 'validateShadeState')
+            else:
+                if settings['commandOverride'] != 1:
+                    result['commands'].append(validateShades)
+        
+        if settings['commandOverride'] != 1:
+            if in_area:
+                # raise or lower the blinds depending on the weather
+                if condition != settings['lastCondition']:
+                    if condition == "close":
+                        if settings['lastCondition'] != "close":
+                            result['commands'].append('closeAll')
+
+                            db_session.updateSetting('confirmClose', 'validateShadeState')
+                    else:
+                        if settings['lastCondition'] == "close":
+                            result['commands'].append('raiseAll')
+
+                            db_session.updateSetting('confirmRaise', 'validateShadeState')
+            
+                    db_session.updateSetting(condition, 'lastCondition')
+                
+                db_session.updateSetting('true','lastInArea')
+
+            else:
+                # if the last update position was within the watch area, raise the blinds
+                if settings['lastInArea'] == 'true':
+                    if settings['lastCondition'] != "null":
                         result['commands'].append('raiseAll')
 
+                        db_session.updateSetting('null', 'lastCondition')
                         db_session.updateSetting('confirmRaise', 'validateShadeState')
-        
-                db_session.updateSetting(condition, 'lastCondition')
-            
-            db_session.updateSetting('true','lastInArea')
+                
+                    db_session.updateSetting('false','lastInArea')
 
-        else:
-            # if the last update position was within the watch area, raise the blinds
-            if settings['lastInArea'] == 'true':
-                if settings['lastCondition'] != "null":
-                    result['commands'].append('raiseAll')
-
-                    db_session.updateSetting('null', 'lastCondition')
-                    db_session.updateSetting('confirmRaise', 'validateShadeState')
-            
-                db_session.updateSetting('false','lastInArea')
-
-    print(result)
-    return json.dumps(result)
+        print(result)
+        return json.dumps(result)
+    else:
+        return ('', 204)
 
 ###############################################
 ### Controls the color of the console light ###
@@ -204,6 +210,10 @@ def sun_control():
 
 @app.route('/console_light')
 def console_light():
+    # connect to DB and get ready for queries
+    con = sqlite3.connect('persist.db')
+    cur = self.con.cursor()
+    
     tv_aid = request.args.get('tv_aid')
 
     tvIdMap = {

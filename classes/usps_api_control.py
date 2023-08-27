@@ -55,7 +55,7 @@ class USPSApi():
         chromeOptions.add_argument("--headless")
         chromeOptions.add_argument('--user-agent={}'.format(self.USER_AGENT))
 
-        driver = webdriver.Chrome('/usr/local/bin/chromedriver', options=chromeOptions, service_args=["--log-path=/home/aukteris/projects/code/testing/chromedriver.log"])
+        driver = webdriver.Chrome('/usr/local/bin/chromedriver', options=chromeOptions, service_args=["--log-path=/home/aukteris/chromedriver.log"])
         driver.get(self.LOGUN_URL)
 
         WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "input#username"))).send_keys(session.auth.username)
