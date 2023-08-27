@@ -5,7 +5,6 @@ gunicorn
 flask
 greenlet
 gevent
-pickle
 bs4
 requests_cache
 noaa-sdk
