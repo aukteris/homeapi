@@ -3,6 +3,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import TimeoutException, WebDriverException
 import time
 import os.path
@@ -54,13 +55,16 @@ class USPSApi():
         chromeOptions.add_argument("--disable-extensions")
         chromeOptions.add_argument("--headless")
         chromeOptions.add_argument('--user-agent={}'.format(self.USER_AGENT))
+        chromeOptions.add_argument("--log-path=/home/aukteris/chromedriver.log");
 
-        driver = webdriver.Chrome('/usr/local/bin/chromedriver', options=chromeOptions, service_args=["--log-path=/home/aukteris/chromedriver.log"])
+        service = Service(executable_path=r'/usr/local/bin/chromedriver')
+
+        driver = webdriver.Chrome(service=service, options=chromeOptions)
         driver.get(self.LOGUN_URL)
 
         WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "input#username"))).send_keys(session.auth.username)
-        driver.find_element_by_css_selector("input#password").send_keys(session.auth.password)
-        driver.find_element_by_css_selector("button#btn-submit").click()
+        driver.find_element(By.CSS_SELECTOR, "input#password").send_keys(session.auth.password)
+        driver.find_element(By.CSS_SELECTOR, "button#btn-submit").click()
 
         try:
             WebDriverWait(driver, 15).until(EC.title_is('Welcome | USPS'))
