@@ -13,6 +13,7 @@ import requests_cache
 import datetime
 import pickle
 import json
+import re
 from bs4 import BeautifulSoup
 
 class USPSError(Exception):
@@ -55,7 +56,8 @@ class USPSApi():
         chromeOptions.add_argument("--disable-extensions")
         chromeOptions.add_argument("--headless")
         chromeOptions.add_argument('--user-agent={}'.format(self.USER_AGENT))
-        chromeOptions.add_argument("--log-path=/home/aukteris/chromedriver.log");
+        chromeOptions.add_argument("--log-path=/home/aukteris/chromedriver.log")
+        chromeOptions.binary_location = r"/usr/bin/google-chrome"
 
         service = Service(executable_path=r'/usr/local/bin/chromedriver')
 
@@ -138,7 +140,19 @@ class USPSApi():
                 'date': date
             })
         
-        return mail
+        mail_count = 0
+        date_text = date.strftime('%m/%d/%Y')
+        
+        for row in parsed.find_all('li', {'id': date_text}):
+            selected_day_text = row.find('a').get_text()
+            mail_count = re.findall('\(([0-9]?)\)', selected_day_text)[0]
+        
+        mail_check_result = {
+            'count': int(mail_count),
+            'mail': mail
+        }
+
+        return mail_check_result
 
     def start_session(self, user, password):
         class USPSAuth(AuthBase):

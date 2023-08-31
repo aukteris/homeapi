@@ -11,6 +11,7 @@ from classes.sun_control import sun_control_master, db_connect
 from classes.hbapi_control import hb_authorize, acc_char_data
 
 hbCliHelper = importlib.import_module('homebridgeUIAPI-python.classes.cliHelper')
+# from homebridgeUIAPIpython.classes import cliHelp as hbCliHelper
 
 app = Flask(__name__)
 
@@ -39,14 +40,14 @@ def extract_ups():
         SFDC = SFDCApi()
         sfdc_sesh = SFDC.get_sfdc_session(sfdcCreds['client_id'], sfdcCreds['client_secret'], sfdcCreds['refresh_token'], sfdcCreds['domain'])
 
-        for mail in todaysMail:
+        for mail in todaysMail['mail']:
             r = USPS.download_image(sesh, mail['image'])
 
             mailId = SFDC.new_mail_item(sfdc_sesh, mail)
             SFDC.upload_mail_image(sfdc_sesh, mail, mailId, r.content)
 
-        if len(todaysMail) > 0:
-            note = str(len(todaysMail)) + ' mail incoming'
+        if todaysMail['count'] > 0:
+            note = str(todaysMail['count']) + ' mail incoming'
 
             SFDC.send_notification(sfdc_sesh, note)
 
