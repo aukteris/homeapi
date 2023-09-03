@@ -126,10 +126,18 @@ class USPSApi():
         
         if date is None:
             date = datetime.datetime.now().date()
-        
+
+        # get all the mail images being delivered today
         response = self._get_dashboard(session, date)
         parsed = BeautifulSoup(response.text, 'html.parser')
+        
         mail = []
+        mail_count = 0
+        incoming_packages_count = 0
+        today_packages_count = 0
+        date_text = date.strftime('%m/%d/%Y')
+
+        # get the details for mail piece coming today
         for row in parsed.find_all('div', {'class': 'mailpiece'}):
             image = self._get_mailpiece_image(row)
             if not image:
@@ -140,15 +148,32 @@ class USPSApi():
                 'date': date
             })
         
-        mail_count = 0
-        date_text = date.strftime('%m/%d/%Y')
-        
+        # get the total count of mail coming in today
         for row in parsed.find_all('li', {'id': date_text}):
             selected_day_text = row.find('a').get_text()
             mail_count = re.findall('\(([0-9]?)\)', selected_day_text)[0]
         
+        today_text = date.strftime('%m/%d')
+
+        # get the count of packages being delivered
+        for row in parsed.find_all('div', {'class': 'pack_row'}):
+            status_text = row.find('div', {'class':'pack_details'}).find('div', {'class':'pack_coltext'}).find('span').get_text()
+            
+            if re.search('Delivered', status_text) == None:
+                incoming_packages_count += 1
+                month = re.findall("([a-zA-Z].*)", row.find('div', {'class':'date-small'}).get_text())[0]
+                day = int(row.find('div', {'class':'date-num-large'}).get_text())
+
+                delivery_date_text = month + ' ' + str(day)
+                delivery_date = datetime.datetime.strptime(delivery_date_text, '%b %d')
+
+                if delivery_date.strftime('%m/%d') == today_text:
+                    today_packages_count += 1
+
         mail_check_result = {
-            'count': int(mail_count),
+            'mail_count': int(mail_count),
+            'package_count': incoming_packages_count,
+            'today_package_count': today_packages_count,
             'mail': mail
         }
 

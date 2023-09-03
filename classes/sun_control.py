@@ -147,20 +147,26 @@ class sun_control_master:
     def sunInArea(self, sunAzm, sunAlt, startAzm, endAzm, startAlt, endAlt):
         result = False
 
-        if sunAzm > startAzm and sunAzm < endAzm:
-            if sunAzm < 180 and sunAlt > startAlt or sunAzm > 180 and sunAlt > endAlt:
+        if sunAzm > float(startAzm) and sunAzm < float(endAzm):
+            if sunAzm < 180 and sunAlt > float(startAlt) or sunAzm > 180 and sunAlt > float(endAlt):
                 result = True
 
         return result
 
     def validateShadeState(self, validateCommand, shade_state):
+        conditionArgs = {
+            'confirmRaise': {
+                'targetState': 100,
+                'command': 'raiseAll'
+            },
+            'confirmClose': {
+                'targetState': 0,
+                'command': 'closeAll'
+            }
+        }
 
-        if validateCommand == 'confirmRaise':
-            if shade_state != '100':
-                return 'raiseAll'
-                            
-        if validateCommand == 'confirmClose':
-            if shade_state != '0':
-                return 'closeAll'
+        for state in shade_state.values():
+            if (state != conditionArgs[validateCommand]['targetState']):
+                return conditionArgs[validateCommand]['command']
 
         return None

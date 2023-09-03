@@ -46,9 +46,18 @@ def extract_ups():
             mailId = SFDC.new_mail_item(sfdc_sesh, mail)
             SFDC.upload_mail_image(sfdc_sesh, mail, mailId, r.content)
 
-        if todaysMail['count'] > 0:
-            note = str(todaysMail['count']) + ' mail incoming'
+        if (todaysMail['mail_count'] + todaysMail['package_count']) > 0:
+            note = ''
 
+            if todaysMail['mail_count'] > 0:
+                note = note + str(todaysMail['mail_count']) + ' mail delivering today. '
+
+            if todaysMail['today_package_count'] > 0:
+                note = note + str(todaysMail['today_package_count']) + ' packages delivering today. '
+
+            if todaysMail['package_count'] != todaysMail['today_package_count']:
+                note = note + str(todaysMail['package_count']) + ' total packages incoming. '
+                    
             SFDC.send_notification(sfdc_sesh, note)
 
             return note
@@ -144,7 +153,7 @@ def sun_control():
         #condition = db_session.topConditionFromHistory()
         condition = db_session.topConditionTypeFromHistory()
 
-        shade_state = request.args.get('shade_state')
+        shade_state = json.loads(request.args.get('shade_state'))
 
         now = datetime.datetime.now(tz=pytz.timezone('US/Pacific'))
 
@@ -159,7 +168,7 @@ def sun_control():
             'status':'success',
             'commands':[]
         }
-
+        
         # logic to retry shade commands if the blinds aren't in the correct state
         if settings['validateShadeState'] != 'null' and (condition == settings['lastCondition'] or settings['lastCondition'] == 'null'):
             validateShades = the_sun.validateShadeState(settings['validateShadeState'],shade_state)
