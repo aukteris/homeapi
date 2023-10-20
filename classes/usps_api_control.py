@@ -14,6 +14,7 @@ import datetime
 import pickle
 import json
 import re
+import jwt
 from bs4 import BeautifulSoup
 
 class USPSError(Exception):
@@ -30,7 +31,7 @@ class USPSApi():
     LOGUN_URL = 'https://reg.usps.com/entreg/LoginAction_input?app=Phoenix&appURL=https://www.usps.com/'
     DASHBOARD_URL = 'https://informeddelivery.usps.com/box/pages/secure/DashboardAction_input.action'
     INFORMED_DELIVERY_IMAGE_URL = 'https://informeddelivery.usps.com/box/pages/secure/'
-    COOKIE_PATH = './usps_cookies.pickle'
+    COOKIE_PATH = './secrets/usps_cookies.pickle'
     CACHE_NAME = 'usps_cache'
     USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) ' \
                 'Chrome/41.0.2228.0 Safari/537.36'
@@ -161,14 +162,17 @@ class USPSApi():
             
             if re.search('Delivered', status_text) == None:
                 incoming_packages_count += 1
-                month = re.findall("([a-zA-Z].*)", row.find('div', {'class':'date-small'}).get_text())[0]
-                day = int(row.find('div', {'class':'date-num-large'}).get_text())
+                month = re.findall("([a-zA-Z].*)", row.find('div', {'class':'date-small'}).get_text())
 
-                delivery_date_text = month + ' ' + str(day)
-                delivery_date = datetime.datetime.strptime(delivery_date_text, '%b %d')
+                # make sure a deliver date is set
+                if (len(month) > 0):
+                    day = int(row.find('div', {'class':'date-num-large'}).get_text())
 
-                if delivery_date.strftime('%m/%d') == today_text:
-                    today_packages_count += 1
+                    delivery_date_text = month[0] + ' ' + str(day)
+                    delivery_date = datetime.datetime.strptime(delivery_date_text, '%b %d')
+
+                    if delivery_date.strftime('%m/%d') == today_text:
+                        today_packages_count += 1
 
         mail_check_result = {
             'mail_count': int(mail_count),
@@ -210,14 +214,14 @@ class USPSApi():
 ### INTERACT WITH SALESFORCE
 
 class SFDCApi():
-    ACCESS_TOKEN_PATH = './sfdc_access_token'
+    ACCESS_TOKEN_PATH = './secrets/sfdc_access_token.pickle'
     SFDC_CACHE_NAME = 'sfdc_cache'
 
     REST_BASE_URL = '/services/data/'
     API_VERSION = 'v52.0'
     CONTENT_VERSION_ENDPOINT = '/sobjects/ContentVersion'
     MAIL_ENDPOINT = '/sobjects/Mail__c/'
-    REFRESH_TOKEN_ENDPOINT = '/services/oauth2/token'
+    TOKEN_ENDPOINT = '/services/oauth2/token'
     FLOW_ENDPOINT = '/actions/custom/flow/'
 
     def _save_token(self, token, filename):
@@ -233,18 +237,42 @@ class SFDCApi():
             return pickle.load(handle)
 
     def _refresh_sfdc(self, session):
-        print('refreshing access token')
-        requestData = {'grant_type':'refresh_token',
-                        'client_id':session.auth.client_id,
-                        'client_secret':session.auth.client_secret,
-                        'refresh_token':session.auth.refresh_token}
-        res = requests.post(url=session.auth.domain + self.REFRESH_TOKEN_ENDPOINT,
-                            data=requestData)
+        if session.auth.authtype == "refresh":
+            print('refresh token flow - refreshing access token')
+            requestData = {'grant_type':'refresh_token',
+                            'client_id':session.auth.client_id,
+                            'client_secret':session.auth.client_secret,
+                            'refresh_token':session.auth.refresh_token}
+            res = requests.post(url=session.auth.domain + self.TOKEN_ENDPOINT,
+                                data=requestData)
 
-        if res.status_code == 200:
-            resultObj = json.loads(res.content)
-            self._save_token(resultObj['access_token'], self.ACCESS_TOKEN_PATH)
-            session.auth.access_token = resultObj['access_token']
+            if res.status_code == 200:
+                resultObj = json.loads(res.content)
+                self._save_token(resultObj['access_token'], self.ACCESS_TOKEN_PATH)
+                session.auth.access_token = resultObj['access_token']
+        
+        elif session.auth.authtype == "jwt":
+            print('jwt bearer flow - generating access token')
+            expires = time.time() + 300
+
+            payload = {"iss": session.auth.client_id, "sub": session.auth.user_name, "aud": session.auth.aud, "exp": str(expires)}
+            
+            encoded_jwt = jwt.encode(payload, session.auth.private_key, algorithm="RS256")
+
+            requestData = "grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=" + encoded_jwt
+            headers = {'Content-Type':'application/x-www-form-urlencoded'}
+
+            res = requests.post(url=session.auth.domain + self.TOKEN_ENDPOINT,
+                                data=requestData, headers=headers)
+
+            if res.status_code == 200:
+                resultObj = json.loads(res.content)
+                self._save_token(resultObj['access_token'], self.ACCESS_TOKEN_PATH)
+                session.auth.access_token = resultObj['access_token']
+        
+        else:
+            print('authtype not supported')
+            raise SFDCError('authtype not supported')
 
     def authenticated_sfdc(function):
         """Re-authenticate if session expired."""
@@ -258,25 +286,29 @@ class SFDCApi():
                 return function(*args)
         return wrapped
 
-    def get_sfdc_session(self, cid, csec, ref, dom):
+    def get_sfdc_session(self, cid, csec=None, ref=None, dom=None, usr=None, aud=None, at=None, key=None):
 
         class SFDCAuth(AuthBase): 
             """SFDC authorization storage."""
 
-            def __init__(self, client_id, client_secret, refresh_token, domain):
+            def __init__(self, client_id, client_secret, refresh_token, domain, user_name, audience, authtype, privatekey):
                 """Init."""
                 self.access_token = None
                 self.client_id = client_id
                 self.client_secret = client_secret
                 self.refresh_token = refresh_token
                 self.domain = domain
+                self.aud = audience
+                self.authtype = authtype
+                self.user_name = user_name
+                self.private_key = privatekey
 
             def __call__(self, r):
                 """Call is no-op."""
                 return r
 
         session = requests_cache.CachedSession(cache_name=self.SFDC_CACHE_NAME)
-        session.auth = SFDCAuth(cid, csec, ref, dom)
+        session.auth = SFDCAuth(cid, csec, ref, dom, usr, aud, at, key)
 
         if os.path.exists(self.ACCESS_TOKEN_PATH):
             session.auth.access_token = self._load_token(self.ACCESS_TOKEN_PATH)
@@ -297,11 +329,16 @@ class SFDCApi():
         res = session.post(url = requestUrl,
                             data = json.dumps(requestData),
                             headers = headers)
-        
+
         if res.status_code == 401:
             raise SFDCError('access token expired')
 
-        return json.loads(res.content)['id']
+        resJson = json.loads(res.content)
+
+        if 'errorCode' in resJson:
+            print(resJson)
+
+        return resJson['id']
 
     @authenticated_sfdc
     def upload_mail_image(self, session, mail_item, rec_id, image_data):

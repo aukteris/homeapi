@@ -15,8 +15,9 @@ hbCliHelper = importlib.import_module('homebridgeUIAPI-python.classes.cliHelper'
 
 app = Flask(__name__)
 
-uspsAuthFile = "./uspsAuth.json"
-sfdcAuthFile = "./sfdcAuth.json"
+uspsAuthFile = "./secrets/uspsAuth.json"
+sfdcAuthFile = "./secrets/sfdcAuth.json"
+sfdcPrivateKey = "./secrets/private.key"
 
 ############################################
 ### USPS Informed Delivery Notifications ###
@@ -31,6 +32,9 @@ def extract_ups():
 
         with open(sfdcAuthFile) as f:
             sfdcCreds = json.loads(f.read())
+        
+        with open(sfdcPrivateKey) as f:
+            sfdcPKey = f.read()
 
         USPS = USPSApi()
         sesh = USPS.start_session(uspsCreds['username'], uspsCreds['password'])
@@ -38,7 +42,7 @@ def extract_ups():
         todaysMail = USPS.get_mail(sesh)
 
         SFDC = SFDCApi()
-        sfdc_sesh = SFDC.get_sfdc_session(sfdcCreds['client_id'], sfdcCreds['client_secret'], sfdcCreds['refresh_token'], sfdcCreds['domain'])
+        sfdc_sesh = SFDC.get_sfdc_session(sfdcCreds['client_id'], sfdcCreds['client_secret'], sfdcCreds['refresh_token'], sfdcCreds['domain'],  usr=sfdcCreds['username'], aud=sfdcCreds['audience'], at=sfdcCreds['authflow'], key=sfdcPKey)
 
         for mail in todaysMail['mail']:
             r = USPS.download_image(sesh, mail['image'])
@@ -62,6 +66,7 @@ def extract_ups():
 
             return note
         else:
+            SFDC.send_notification(sfdc_sesh, "No activity today")
             return('no mail')
     else:
         return ('', 204)
@@ -222,7 +227,7 @@ def sun_control():
 def console_light():
     # connect to DB and get ready for queries
     con = sqlite3.connect('persist.db')
-    cur = self.con.cursor()
+    cur = con.cursor()
     
     tv_aid = request.args.get('tv_aid')
 

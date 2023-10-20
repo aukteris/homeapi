@@ -8,6 +8,8 @@ sfdcAuth.json
 
 .authStore
 .sessionStore
+*.key
+secrets/*
 
 usps_cache.sqlite
 usps_cookies.pickle
