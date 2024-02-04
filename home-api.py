@@ -4,6 +4,7 @@ import datetime
 import pytz
 import sqlite3
 import importlib
+from apscheduler.schedulers.background import BackgroundScheduler
 from noaa_sdk import NOAA
 
 from classes.usps_api_control import USPSApi, SFDCApi, USPSError, SFDCError
@@ -13,11 +14,16 @@ from classes.hbapi_control import hb_authorize, acc_char_data
 hbCliHelper = importlib.import_module('homebridgeUIAPI-python.classes.cliHelper')
 # from homebridgeUIAPIpython.classes import cliHelp as hbCliHelper
 
+scheduler = BackgroundScheduler()
+
 app = Flask(__name__)
 
+hbAuthFile = "./secrets/hbAuth.json"
 uspsAuthFile = "./secrets/uspsAuth.json"
 sfdcAuthFile = "./secrets/sfdcAuth.json"
 sfdcPrivateKey = "./secrets/private.key"
+
+ticktockJob = {"status":"Stopped","job":None} 
 
 ############################################
 ### USPS Informed Delivery Notifications ###
@@ -140,7 +146,7 @@ def sun_control():
         settings = db_session.getSettings()
 
         # use condition passed in from iOS Weather
-        db_session.logCondition(request.args.get('condition'))
+        # db_session.logCondition(request.args.get('condition'))
 
         # alternative approach, use lux from the doorbell instead (this needs a better sensor to function)
         #luxString = request.args.get('lux')
@@ -154,6 +160,11 @@ def sun_control():
         #for obs in weatherSample:
         #    db_session.logCondition(obs['textDescription'])
         #    break
+
+        # solar state
+        solarStatus = int(request.args.get('solar'))
+        solarCondition = 'Cloudy' if solarStatus < settings['solarThresh'] else 'Clear'
+        db_session.logCondition(solarCondition)
 
         #condition = db_session.topConditionFromHistory()
         condition = db_session.topConditionTypeFromHistory()
@@ -251,7 +262,7 @@ def console_light():
 
 @app.route('/')
 def adminPanel():
-    return render_template('adminPanel.html', get_settings_url=url_for('.getSettingVals'), save_settings_url=url_for('.saveSettingVals'), condition_history_url=url_for('.getConditionHistory'), distinct_conditions_url=url_for('.getDistinctConditions'))
+    return render_template('adminPanel.html', get_settings_url=url_for('.getSettingVals'), save_settings_url=url_for('.saveSettingVals'), condition_history_url=url_for('.getConditionHistory'), distinct_conditions_url=url_for('.getDistinctConditions'), ticktock_status_url=url_for('.statusTicktock'), ticktock_start_url=url_for('.startTicktock'), ticktock_stop_url=url_for('.stopTicktock'))
 
 @app.route('/getSettingVals')
 def getSettingVals():
@@ -295,7 +306,7 @@ def saveSettingVals():
 
     con.close()
 
-    return "success"
+    return "{\"status\":\"success\"}"
 
 @app.route('/getConditionHistory')
 def getConditionHistory():
@@ -333,6 +344,50 @@ def getTimeSinceLastCheck():
     difference = nowDate - newestDate
 
     return json.dumps(difference.total_seconds())
+
+def ticktock():
+    print("tick")
+
+    with open(hbAuthFile) as f:
+        hbCreds = json.loads(f.read())
+
+    thisExec = hbCliHelper.cliExecutor()
+
+    hb_auth_payload = hb_authorize(hbCreds['host'], hbCreds['port'], hbCreds['username'], hbCreds['password'])
+
+    hisExec = hbCliHelper.cliExecutor()
+    authResult = thisExec.authorize(hb_auth_payload)
+
+    tick_set_acc_char_payload = acc_char_data("Tick", ["On","1"], authResult['sessionId'])
+    light_set_acc_char_payload = acc_char_data("ConsoleLightUpdate", ["On","1"], authResult['sessionId'])
+
+    thisExec.setaccessorychar(tick_set_acc_char_payload)
+    thisExec.setaccessorychar(light_set_acc_char_payload)
+
+@app.route('/startTicktock')
+def startTicktock():
+    scheduler.add_job(ticktock, 'interval', id='ticktock', seconds=30)
+    ticktockJob['status'] = "Running"
+    if scheduler.state == 0:
+        scheduler.start()
+    else:
+        scheduler.resume()
+
+    return "{\"status\":\"success\"}"
+
+@app.route('/stopTicktock')
+def stopTicktock():
+    scheduler.remove_job('ticktock')
+    ticktockJob['status'] = "Stopped"
+    scheduler.pause()
+
+    return "{\"status\":\"success\"}"
+
+@app.route('/statusTicktock')
+def statusTicktock():
+    result = {"status":ticktockJob['status']}
+
+    return json.dumps(result)
 
 if __name__ == "__main__":
     app.run(threaded=True)

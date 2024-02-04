@@ -6,6 +6,9 @@
             const save_settings_url = "{{save_settings_url}}"
             const condition_history_url = "{{condition_history_url}}"
             const distinct_conditions_url = "{{distinct_conditions_url}}"
+            const ticktock_status_url = "{{ticktock_status_url}}"
+            const ticktock_stop_url = "{{ticktock_stop_url}}"
+            const ticktock_start_url = "{{ticktock_start_url}}"
         </script>
         <script src="{{ url_for('static',filename='adminPanel.js') }}"> </script>
         <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles/adminPanel.css') }}">
@@ -32,6 +35,9 @@
                     </tr>
                     <tr>
                         <td class="labelCell">lastInArea</td><td><b><span id="lastInArea"></span></b></td>
+                    </tr>
+                    <tr>
+                        <td class="labelCell">tickTock</td><td><b><span id="tickTock"></span><button name="ticktockStart" onClick="startTicktock()">Start</button><button name="ticktockStop" onClick="stopTicktock()">Stop</button></b></td>
                     </tr>            
                 </table>
             </p>

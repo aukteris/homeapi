@@ -15,7 +15,8 @@ class db_connect:
             'lastAlt':'null',
             'luxThresh':3000,
             'conditionHistoryLength':5,
-            'commandOverride':0
+            'commandOverride':0,
+            'solarThresh':20
         }
 
         self.conditionDefaults = ['Clear','Mostly Clear']
