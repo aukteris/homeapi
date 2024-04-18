@@ -16,7 +16,13 @@ class db_connect:
             'luxThresh':3000,
             'conditionHistoryLength':5,
             'commandOverride':0,
-            'solarThresh':20
+            'solarThresh':20,
+            'changeBufferDurationSec':600,
+            'lastChangeDate':0,
+            'upperAlt':55,
+            'lowerAlt':15,
+            'upperAltPer':1,
+            'lowerAltPer':0.5
         }
 
         self.conditionDefaults = ['Clear','Mostly Clear']
@@ -60,7 +66,7 @@ class db_connect:
         self.cur.execute('SELECT value FROM settings WHERE name = :name', {'name':settingName})
         rs = self.cur.fetchall() 
 
-        return int(rs[0][0]) if rs[0][0].isdigit() else rs[0][0]
+        return int(rs[0][0]) if rs[0][0].isdigit() else float(rs[0][0]) if self.is_float(rs[0][0]) else rs[0][0]
     
     def getSettings(self):
         names = []
@@ -76,7 +82,7 @@ class db_connect:
         result = {}
         if len(res) > 0:
             for r in res:
-                result[r[0]] = int(r[1]) if r[1].isdigit() else r[1]
+                result[r[0]] = int(r[1]) if r[1].isdigit() else float(r[1]) if self.is_float(r[1]) else r[1]
 
         return result
 
@@ -120,6 +126,13 @@ class db_connect:
         retval = "close" if rs[0][0] == 1 else "open"
 
         return retval
+    
+    def is_float(self, string):
+        try:
+            float(string)
+            return True
+        except ValueError:
+            return False
 
 
 class sun_control_master:

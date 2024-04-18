@@ -1,6 +1,7 @@
 from flask import Flask, request, Response, redirect, url_for, render_template
 import json
 import datetime
+import calendar
 import pytz
 import sqlite3
 import importlib
@@ -145,6 +146,19 @@ def sun_control():
         the_sun = sun_control_master()
         settings = db_session.getSettings()
 
+        #condition = db_session.topConditionFromHistory()
+        condition = db_session.topConditionTypeFromHistory()
+
+        shade_state = json.loads(request.args.get('shade_state'))
+
+        now = datetime.datetime.now(tz=pytz.timezone('US/Pacific'))
+        nowUTC = datetime.datetime.now(tz=pytz.UTC)
+
+        # get the altitude and azimuth of the sun
+        the_sun.get_pos(now)
+        db_session.updateSetting(the_sun.alt, 'lastAlt')
+        db_session.updateSetting(the_sun.azm, 'lastAzm')
+
         # use condition passed in from iOS Weather
         # db_session.logCondition(request.args.get('condition'))
 
@@ -161,22 +175,23 @@ def sun_control():
         #    db_session.logCondition(obs['textDescription'])
         #    break
 
+        weightedSolarThresh = 0
+
+        # solar state weighting logic
+        if the_sun.alt < settings['lowerAlt']:
+            weightedSolarThresh = settings['solarThresh'] * settings['lowerAltPer']
+        elif the_sun.alt > settings['upperAlt']:
+            weightedSolarThresh = settings['solarThresh'] * settings['upperAltPer']
+        else:
+            solarAltWeight = (the_sun.alt - settings['lowerAlt'])/(settings['upperAlt']-settings['lowerAlt'])
+            solarAltWeightPer = ((settings['upperAltPer']-settings['lowerAltPer'])*solarAltWeight)+settings['lowerAltPer']
+            weightedSolarThresh = settings['solarThresh'] * solarAltWeightPer
+            # print(str(weightedSolarThresh) + " " + str(solarAltWeightPer) + " " + str(solarAltWeight))
+
         # solar state
         solarStatus = int(request.args.get('solar'))
-        solarCondition = 'Cloudy' if solarStatus < settings['solarThresh'] else 'Clear'
+        solarCondition = 'Cloudy' if solarStatus < weightedSolarThresh else 'Clear'
         db_session.logCondition(solarCondition)
-
-        #condition = db_session.topConditionFromHistory()
-        condition = db_session.topConditionTypeFromHistory()
-
-        shade_state = json.loads(request.args.get('shade_state'))
-
-        now = datetime.datetime.now(tz=pytz.timezone('US/Pacific'))
-
-        # get the altitude and azimuth of the sun
-        the_sun.get_pos(now)
-        db_session.updateSetting(the_sun.alt, 'lastAlt')
-        db_session.updateSetting(the_sun.azm, 'lastAzm')
         
         in_area = the_sun.sunInArea(the_sun.azm, the_sun.alt, settings['startAzm'], settings['endAzm'], settings['startAlt'], settings['endAlt'])
 
@@ -197,22 +212,35 @@ def sun_control():
         
         if settings['commandOverride'] != 1:
             if in_area:
-                # raise or lower the blinds depending on the weather
-                if condition != settings['lastCondition']:
-                    if condition == "close":
-                        if settings['lastCondition'] != "close":
-                            result['commands'].append('closeAll')
 
-                            db_session.updateSetting('confirmClose', 'validateShadeState')
-                    else:
-                        if settings['lastCondition'] == "close":
-                            result['commands'].append('raiseAll')
+                # check for duration since last change to make sure we're not raising/lowering too frequently
+                lastChangeDate = datetime.datetime.fromtimestamp(settings['lastChangeDate'], tz=pytz.UTC)
 
-                            db_session.updateSetting('confirmRaise', 'validateShadeState')
-            
-                    db_session.updateSetting(condition, 'lastCondition')
+                diffSinceLastChangeDate = nowUTC - lastChangeDate
+                diffSeconds = diffSinceLastChangeDate.total_seconds()
+                print(diffSeconds)
+                print(settings['lastChangeDate'])
+
+
+                if diffSeconds > settings['changeBufferDurationSec']:
+
+                    # raise or lower the blinds depending on the weather
+                    if condition != settings['lastCondition']:
+                        if condition == "close":
+                            if settings['lastCondition'] != "close":
+                                result['commands'].append('closeAll')
+
+                                db_session.updateSetting('confirmClose', 'validateShadeState')
+                        else:
+                            if settings['lastCondition'] == "close":
+                                result['commands'].append('raiseAll')
+
+                                db_session.updateSetting('confirmRaise', 'validateShadeState')
                 
-                db_session.updateSetting('true','lastInArea')
+                        db_session.updateSetting(condition, 'lastCondition')
+                        db_session.updateSetting(calendar.timegm(nowUTC.timetuple()), 'lastChangeDate')
+                    
+                    db_session.updateSetting('true','lastInArea')
 
             else:
                 # if the last update position was within the watch area, raise the blinds
@@ -275,11 +303,18 @@ def getSettingVals():
     result = {}
     if len(rs) > 0:
         for r in rs:
-            result[r[0]] = int(r[1]) if r[1].isdigit() else r[1]
+            result[r[0]] = int(r[1]) if r[1].isdigit() else float(r[1]) if is_float(r[1]) else r[1]
 
     con.close()
 
     return json.dumps(result)
+
+def is_float(string):
+    try:
+        float(string)
+        return True
+    except ValueError:
+        return False
 
 @app.route('/saveSettingVals', methods=["POST"])
 def saveSettingVals():
@@ -293,6 +328,11 @@ def saveSettingVals():
     updates['conditionHistoryLength'] = payload['conditionHistoryLength']
     updates['commandOverride'] = payload['commandOverride']
     updates['luxThresh'] = payload['luxThresh']
+    updates['changeBufferDurationSec'] = payload['changeBufferDurationSec']
+    updates['upperAlt'] = payload['upperAlt']
+    updates['lowerAlt'] = payload['lowerAlt']
+    updates['upperAltPer'] = payload['upperAltPer']
+    updates['lowerAltPer'] = payload['lowerAltPer']
 
     con = sqlite3.connect('persist.db')
     cur = con.cursor()

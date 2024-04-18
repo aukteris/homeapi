@@ -32,12 +32,18 @@ function loadSettings() {
         document.getElementsByName('endAlt')[0].value = response['endAlt'];
         document.getElementsByName('luxThresh')[0].value = response['luxThresh'];
         document.getElementsByName('conditionHistoryLength')[0].value = response['conditionHistoryLength'];
+        document.getElementsByName('changeBufferDurationSec')[0].value = response['changeBufferDurationSec'];
+        document.getElementsByName('upperAlt')[0].value = response['upperAlt'];
+        document.getElementsByName('lowerAlt')[0].value = response['lowerAlt'];
+        document.getElementsByName('upperAltPer')[0].value = response['upperAltPer'];
+        document.getElementsByName('lowerAltPer')[0].value = response['lowerAltPer'];
 
         document.getElementById('lastAzm').innerHTML = response['lastAzm'];
         document.getElementById('lastAlt').innerHTML = response['lastAlt'];
         document.getElementById('lastCondition').innerHTML = response['lastCondition'];
         document.getElementById('validateShadeState').innerHTML = response['validateShadeState'];
         document.getElementById('lastInArea').innerHTML = response['lastInArea'];
+        document.getElementById('lastChangeDate').innerHTML = new Date(response['lastChangeDate'] * 1000);
         
         if (response['commandOverride'] == 1) document.getElementById('override').checked = true;
     });
@@ -108,6 +114,11 @@ function saveSettings() {
     let endAlt = document.getElementsByName('endAlt')[0].value;
     let conditionHistoryLength = document.getElementsByName('conditionHistoryLength')[0].value;
     let luxThresh = document.getElementsByName('luxThresh')[0].value;
+    let changeBufferDurationSec = document.getElementsByName('changeBufferDurationSec')[0].value;
+    let upperAlt = document.getElementsByName('upperAlt')[0].value;
+    let lowerAlt = document.getElementsByName('lowerAlt')[0].value;
+    let upperAltPer = document.getElementsByName('upperAltPer')[0].value;
+    let lowerAltPer = document.getElementsByName('lowerAltPer')[0].value;
     let commandOverride = document.getElementById('override').checked == true ? 1 : 0;
 
     let payload = {
@@ -118,6 +129,11 @@ function saveSettings() {
         "conditionHistoryLength":conditionHistoryLength,
         "commandOverride":commandOverride,
         "luxThresh":luxThresh,
+        "changeBufferDurationSec":changeBufferDurationSec,
+        "upperAlt":upperAlt,
+        "lowerAlt":lowerAlt,
+        "upperAltPer":upperAltPer,
+        "lowerAltPer":lowerAltPer,
         "distinctConditions":{}
     };
     
