@@ -31,6 +31,7 @@ function loadSettings() {
         document.getElementsByName('startAlt')[0].value = response['startAlt'];
         document.getElementsByName('endAlt')[0].value = response['endAlt'];
         document.getElementsByName('luxThresh')[0].value = response['luxThresh'];
+        document.getElementsByName('solarThresh')[0].value = response['solarThresh'];
         document.getElementsByName('conditionHistoryLength')[0].value = response['conditionHistoryLength'];
         document.getElementsByName('changeBufferDurationSec')[0].value = response['changeBufferDurationSec'];
         document.getElementsByName('upperAlt')[0].value = response['upperAlt'];
@@ -114,6 +115,7 @@ function saveSettings() {
     let endAlt = document.getElementsByName('endAlt')[0].value;
     let conditionHistoryLength = document.getElementsByName('conditionHistoryLength')[0].value;
     let luxThresh = document.getElementsByName('luxThresh')[0].value;
+    let solarThresh = document.getElementsByName('solarThresh')[0].value;
     let changeBufferDurationSec = document.getElementsByName('changeBufferDurationSec')[0].value;
     let upperAlt = document.getElementsByName('upperAlt')[0].value;
     let lowerAlt = document.getElementsByName('lowerAlt')[0].value;
@@ -129,6 +131,7 @@ function saveSettings() {
         "conditionHistoryLength":conditionHistoryLength,
         "commandOverride":commandOverride,
         "luxThresh":luxThresh,
+        "solarThresh":solarThresh,
         "changeBufferDurationSec":changeBufferDurationSec,
         "upperAlt":upperAlt,
         "lowerAlt":lowerAlt,

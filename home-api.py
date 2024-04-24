@@ -226,17 +226,18 @@ def sun_control():
 
                     # raise or lower the blinds depending on the weather
                     if condition != settings['lastCondition']:
+                        state = ""
                         if condition == "close":
                             if settings['lastCondition'] != "close":
                                 result['commands'].append('closeAll')
-
-                                db_session.updateSetting('confirmClose', 'validateShadeState')
+                                state = 'confirmClose'
+                                
                         else:
                             if settings['lastCondition'] == "close":
                                 result['commands'].append('raiseAll')
-
-                                db_session.updateSetting('confirmRaise', 'validateShadeState')
-                
+                                state = 'confirmRaise'
+                        
+                        db_session.updateSetting(state, 'validateShadeState')
                         db_session.updateSetting(condition, 'lastCondition')
                         db_session.updateSetting(calendar.timegm(nowUTC.timetuple()), 'lastChangeDate')
                     
@@ -328,6 +329,7 @@ def saveSettingVals():
     updates['conditionHistoryLength'] = payload['conditionHistoryLength']
     updates['commandOverride'] = payload['commandOverride']
     updates['luxThresh'] = payload['luxThresh']
+    updates['solarThresh'] = payload['solarThresh']
     updates['changeBufferDurationSec'] = payload['changeBufferDurationSec']
     updates['upperAlt'] = payload['upperAlt']
     updates['lowerAlt'] = payload['lowerAlt']
