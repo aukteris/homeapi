@@ -38,6 +38,7 @@ function loadSettings() {
         document.getElementsByName('lowerAlt')[0].value = response['lowerAlt'];
         document.getElementsByName('upperAltPer')[0].value = response['upperAltPer'];
         document.getElementsByName('lowerAltPer')[0].value = response['lowerAltPer'];
+        document.getElementsByName('ticktockInterval')[0].value = response['ticktockInterval'];
 
         document.getElementById('lastAzm').innerHTML = response['lastAzm'];
         document.getElementById('lastAlt').innerHTML = response['lastAlt'];
@@ -121,6 +122,7 @@ function saveSettings() {
     let lowerAlt = document.getElementsByName('lowerAlt')[0].value;
     let upperAltPer = document.getElementsByName('upperAltPer')[0].value;
     let lowerAltPer = document.getElementsByName('lowerAltPer')[0].value;
+    let ticktockInterval = document.getElementsByName('ticktockInterval')[0].value;
     let commandOverride = document.getElementById('override').checked == true ? 1 : 0;
 
     let payload = {
@@ -137,6 +139,7 @@ function saveSettings() {
         "lowerAlt":lowerAlt,
         "upperAltPer":upperAltPer,
         "lowerAltPer":lowerAltPer,
+        "ticktockInterval":ticktockInterval,
         "distinctConditions":{}
     };
     

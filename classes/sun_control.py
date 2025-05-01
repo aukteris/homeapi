@@ -22,7 +22,8 @@ class db_connect:
             'upperAlt':55,
             'lowerAlt':15,
             'upperAltPer':1,
-            'lowerAltPer':0.5
+            'lowerAltPer':0.5,
+            'ticktockInterval':30
         }
 
         self.conditionDefaults = ['Clear','Mostly Clear']

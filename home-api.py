@@ -24,7 +24,7 @@ uspsAuthFile = "./secrets/uspsAuth.json"
 sfdcAuthFile = "./secrets/sfdcAuth.json"
 sfdcPrivateKey = "./secrets/private.key"
 
-ticktockJob = {"status":"Stopped","job":None} 
+ticktockJob = {"status":"Stopped","job":None,"interval":30}
 
 ############################################
 ### USPS Informed Delivery Notifications ###
@@ -89,8 +89,9 @@ def hb_auth():
     user = request.json.get('user')
     passwd = request.json.get('passwd')
     config = request.json.get('config')
+    secure = request.json.get('secure')
 
-    hb_auth_payload = hb_authorize(host, port, user, passwd, config)
+    hb_auth_payload = hb_authorize(host, port, user, passwd, config, secure)
 
     thisExec = hbCliHelper.cliExecutor()
     result = thisExec.authorize(hb_auth_payload)
@@ -308,6 +309,9 @@ def getSettingVals():
 
     con.close()
 
+    # blatant hack to load the refresh interval to memory from the database
+    ticktockJob['interval'] = int(result['ticktockInterval'])
+
     return json.dumps(result)
 
 def is_float(string):
@@ -321,30 +325,19 @@ def is_float(string):
 def saveSettingVals():
     payload = json.loads(request.data)
 
-    updates = {}
-    updates['startAzm'] = payload['startAzm']
-    updates['endAzm'] = payload['endAzm']
-    updates['startAlt'] = payload['startAlt']
-    updates['endAlt'] = payload['endAlt']
-    updates['conditionHistoryLength'] = payload['conditionHistoryLength']
-    updates['commandOverride'] = payload['commandOverride']
-    updates['luxThresh'] = payload['luxThresh']
-    updates['solarThresh'] = payload['solarThresh']
-    updates['changeBufferDurationSec'] = payload['changeBufferDurationSec']
-    updates['upperAlt'] = payload['upperAlt']
-    updates['lowerAlt'] = payload['lowerAlt']
-    updates['upperAltPer'] = payload['upperAltPer']
-    updates['lowerAltPer'] = payload['lowerAltPer']
-
     con = sqlite3.connect('persist.db')
     cur = con.cursor()
 
     for condition in payload['distinctConditions'].keys():
         cur.execute('UPDATE distinctConditions SET blindsClosed = ? WHERE condition = ?', (payload['distinctConditions'][condition], condition))
 
-    for setting in updates:
-        cur.execute('UPDATE settings SET value = ?, last_modified = datetime(\'now\') WHERE name = ?', (updates[setting], setting))
+    payload.pop('distinctConditions')
+
+    for setting in payload:
+        cur.execute('UPDATE settings SET value = ?, last_modified = datetime(\'now\') WHERE name = ?', (payload[setting], setting))
         con.commit()
+
+    ticktockJob['interval'] = int(payload['ticktockInterval'])
 
     con.close()
 
@@ -395,9 +388,7 @@ def ticktock():
 
     thisExec = hbCliHelper.cliExecutor()
 
-    hb_auth_payload = hb_authorize(hbCreds['host'], hbCreds['port'], hbCreds['username'], hbCreds['password'])
-
-    hisExec = hbCliHelper.cliExecutor()
+    hb_auth_payload = hb_authorize(hbCreds['host'], hbCreds['port'], hbCreds['username'], hbCreds['password'],None,hbCreds['secure'])
     authResult = thisExec.authorize(hb_auth_payload)
 
     tick_set_acc_char_payload = acc_char_data("Tick", ["On","1"], authResult['sessionId'])
@@ -408,12 +399,14 @@ def ticktock():
 
 @app.route('/startTicktock')
 def startTicktock():
-    scheduler.add_job(ticktock, 'interval', id='ticktock', seconds=30)
+    scheduler.add_job(ticktock, 'interval', id='ticktock', seconds=ticktockJob['interval'])
     ticktockJob['status'] = "Running"
     if scheduler.state == 0:
         scheduler.start()
     else:
         scheduler.resume()
+
+    ticktock()
 
     return "{\"status\":\"success\"}"
 

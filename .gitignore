@@ -10,6 +10,7 @@ sfdcAuth.json
 .sessionStore
 *.key
 secrets/*
+homeapi-venv
 
 usps_cache.sqlite
 usps_cookies.pickle

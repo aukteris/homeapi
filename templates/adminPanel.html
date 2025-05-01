@@ -10,8 +10,8 @@
             const ticktock_stop_url = "{{ticktock_stop_url}}"
             const ticktock_start_url = "{{ticktock_start_url}}"
         </script>
-        <script src="{{ url_for('static',filename='adminPanel.js') }}?v=1"> </script>
-        <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles/adminPanel.css') }}">
+        <script src="{{ url_for('static',filename='adminPanel.js') }}?v=2"> </script>
+        <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles/adminPanel.css') }}?v=1">
         <meta name="viewport" content="user-scalable=no,width=device-width,initial-scale=1.0">
     </head>
     <body onload="onLoad()">
@@ -95,6 +95,9 @@
                     </tr>
                     <tr>
                         <td>Lower Altitude Applied Weight Percent (lowerAltPer)</td><td><input type="text" name="lowerAltPer"/></td>
+                    </tr>
+                    <tr>
+                        <td>Conditions Check Refresh Interval (ticktockInterval)</td><td><input type="text" name="ticktockInterval"/></td>
                     </tr>
                     <tr>
                         <td><h4>Conditon Mapping</h4></td><td></td>

@@ -8,3 +8,7 @@ gevent
 bs4
 requests_cache
 noaa-sdk
+apscheduler
+selenium
+jwt
+jsonref
