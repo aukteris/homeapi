@@ -155,8 +155,13 @@ def sun_control():
         now = datetime.datetime.now(tz=pytz.timezone('US/Pacific'))
         nowUTC = datetime.datetime.now(tz=pytz.UTC)
 
+        # test times
+        # now = datetime.datetime.now(tz=pytz.timezone('US/Pacific')) - datetime.timedelta (hours=7)
+        # nowUTC = datetime.datetime.now(tz=pytz.UTC) - datetime.timedelta (hours=7)
+
         # get the altitude and azimuth of the sun
         the_sun.get_pos(now)
+
         db_session.updateSetting(the_sun.alt, 'lastAlt')
         db_session.updateSetting(the_sun.azm, 'lastAzm')
 

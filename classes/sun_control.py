@@ -26,7 +26,7 @@ class db_connect:
             'ticktockInterval':30
         }
 
-        self.conditionDefaults = ['Clear','Mostly Clear']
+        self.conditionDefaults = ['Clear','Cloudy']
         
         # connect to DB and get ready for queries
         self.con = sqlite3.connect('persist.db')
@@ -58,6 +58,14 @@ class db_connect:
 
                 self.cur.execute('INSERT INTO distinctConditions (condition, blindsClosed) VALUES (:condition, 1) ', values)
                 self.con.commit()
+        
+        self.cur.execute('SELECT id FROM conditionHistory')
+        rs = self.cur.fetchall()
+
+        if len(rs) == 0:
+            condition = 'Clear'
+            self.cur.execute('INSERT INTO conditionHistory (condition, timestamp) VALUES(?, datetime(\'now\'))', (condition,))
+            self.con.commit()
 
     def updateSetting(self, value, settingName):
         self.cur.execute('UPDATE settings SET value = ?, last_modified = datetime(\'now\') WHERE name = ?', (value, settingName))
