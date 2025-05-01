@@ -26,7 +26,7 @@ class db_connect:
             'ticktockInterval':30
         }
 
-        self.conditionDefaults = ['Clear','Cloudy']
+        self.conditionDefaults = ['Clear','Mostly Clear']
         
         # connect to DB and get ready for queries
         self.con = sqlite3.connect('persist.db')
@@ -159,6 +159,7 @@ class sun_control_master:
         for row in rs:
             conditions.append(row[0])
         
+        # TODO: need to make long and lat configurable
         self.lowerConditions = conditions
         self.latitude = 45.46692
         self.longitude = -122.79286

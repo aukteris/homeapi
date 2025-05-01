@@ -5,8 +5,11 @@ import calendar
 import pytz
 import sqlite3
 import importlib
+import os
 from apscheduler.schedulers.background import BackgroundScheduler
 from noaa_sdk import NOAA
+from pywebostv.connection import WebOSClient
+from pywebostv.controls import ApplicationControl
 
 from classes.usps_api_control import USPSApi, SFDCApi, USPSError, SFDCError
 from classes.sun_control import sun_control_master, db_connect
@@ -23,6 +26,7 @@ hbAuthFile = "./secrets/hbAuth.json"
 uspsAuthFile = "./secrets/uspsAuth.json"
 sfdcAuthFile = "./secrets/sfdcAuth.json"
 sfdcPrivateKey = "./secrets/private.key"
+lgAuthFile = "./secrets/lgtoken.json"
 
 ticktockJob = {"status":"Stopped","job":None,"interval":30}
 
@@ -271,25 +275,56 @@ def sun_control():
 
 @app.route('/console_light')
 def console_light():
-    # connect to DB and get ready for queries
-    con = sqlite3.connect('persist.db')
-    cur = con.cursor()
-    
-    tv_aid = request.args.get('tv_aid')
+    if request.method == 'GET':
+        store = {}
 
-    tvIdMap = {
-        "5":"ColorPC",
-        "3":"ColorAppleTV",
-        "4":"ColorPS4",
-        "6":"ColorNintendo"
-    }
+        if os.path.exists(lgAuthFile):
+            with open(lgAuthFile, 'r') as readfile:
+                store = json.load(readfile)
 
-    result = {
-        'status':'success',
-        'commands':[tvIdMap[tv_aid]]
-    }
+        registered = False
 
-    return json.dumps(result)
+        client = WebOSClient('LGwebOSTV.dankurtz.local', secure=True)
+        client.connect()
+        for status in client.register(store):
+            if status == WebOSClient.PROMPTED:
+                print("Please accept the connect on the TV!")
+            elif status == WebOSClient.REGISTERED:
+                print("Registration successful!")
+                registered = True
+        
+        # save store to file
+        with open(lgAuthFile, 'w') as outfile:
+            json.dump(store, outfile)
+
+        result = {'status':'Not Registered'}
+
+        if registered:
+        
+            # connect to DB and get ready for queries
+            # con = sqlite3.connect('persist.db')
+            # cur = con.cursor()
+            
+            # tv_aid = request.args.get('tv_aid')
+
+            app = ApplicationControl(client)
+            tv_aid = app.get_current()
+
+            tvIdMap = {
+                "com.webos.app.hdmi3":"ColorPC",
+                "com.webos.app.hdmi1":"ColorAppleTV",
+                "com.webos.app.hdmi4":"ColorPS4",
+                "com.webos.app.hdmi5":"ColorNintendo"
+            }
+
+            result = {
+                'status':'success',
+                'commands':[tvIdMap[tv_aid]]
+            }
+
+        return json.dumps(result)
+    else:
+        return ('', 204)
 
 ######################
 ### Admin panel UI ###

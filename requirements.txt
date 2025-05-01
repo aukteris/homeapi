@@ -12,3 +12,4 @@ apscheduler
 selenium
 jwt
 jsonref
+pywebostv
