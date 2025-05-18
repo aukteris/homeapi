@@ -30,58 +30,6 @@ lgAuthFile = "./secrets/lgtoken.json"
 
 ticktockJob = {"status":"Stopped","job":None,"interval":30}
 
-############################################
-### USPS Informed Delivery Notifications ###
-############################################
-
-@app.route('/extract_usps', methods=['GET'])
-def extract_ups():
-    if request.method == 'GET':
-        
-        with open(uspsAuthFile) as f:
-            uspsCreds = json.loads(f.read())
-
-        with open(sfdcAuthFile) as f:
-            sfdcCreds = json.loads(f.read())
-        
-        with open(sfdcPrivateKey) as f:
-            sfdcPKey = f.read()
-
-        USPS = USPSApi()
-        sesh = USPS.start_session(uspsCreds['username'], uspsCreds['password'])
-        #date = datetime.date(2022, 7, 26)
-        todaysMail = USPS.get_mail(sesh)
-
-        SFDC = SFDCApi()
-        sfdc_sesh = SFDC.get_sfdc_session(sfdcCreds['client_id'], sfdcCreds['client_secret'], sfdcCreds['refresh_token'], sfdcCreds['domain'],  usr=sfdcCreds['username'], aud=sfdcCreds['audience'], at=sfdcCreds['authflow'], key=sfdcPKey)
-
-        for mail in todaysMail['mail']:
-            r = USPS.download_image(sesh, mail['image'])
-
-            mailId = SFDC.new_mail_item(sfdc_sesh, mail)
-            SFDC.upload_mail_image(sfdc_sesh, mail, mailId, r.content)
-
-        if (todaysMail['mail_count'] + todaysMail['package_count']) > 0:
-            note = ''
-
-            if todaysMail['mail_count'] > 0:
-                note = note + str(todaysMail['mail_count']) + ' mail delivering today. '
-
-            if todaysMail['today_package_count'] > 0:
-                note = note + str(todaysMail['today_package_count']) + ' packages delivering today. '
-
-            if todaysMail['package_count'] != todaysMail['today_package_count']:
-                note = note + str(todaysMail['package_count']) + ' total packages incoming. '
-                    
-            SFDC.send_notification(sfdc_sesh, note)
-
-            return note
-        else:
-            SFDC.send_notification(sfdc_sesh, "No activity today")
-            return('no mail')
-    else:
-        return ('', 204)
-
 ####################################
 ### Front-end for homebridge API ###
 ####################################
@@ -139,6 +87,77 @@ def list_acc_chars():
     result = thisExec.listaccessorychars(list_acc_char_payload)
 
     return json.dumps(result)
+
+############################################
+### USPS Informed Delivery Notifications ###
+############################################
+
+@app.route('/extract_usps', methods=['GET'])
+def extract_ups():
+    if request.method == 'GET':
+        
+        with open(uspsAuthFile) as f:
+            uspsCreds = json.loads(f.read())
+
+        with open(sfdcAuthFile) as f:
+            sfdcCreds = json.loads(f.read())
+        
+        with open(sfdcPrivateKey) as f:
+            sfdcPKey = f.read()
+
+        USPS = USPSApi()
+        sesh = USPS.start_session(uspsCreds['username'], uspsCreds['password'])
+        #date = datetime.date(2022, 7, 26)
+        todaysMail = USPS.get_mail(sesh)
+
+        SFDC = SFDCApi()
+        sfdc_sesh = SFDC.get_sfdc_session(sfdcCreds['client_id'], sfdcCreds['client_secret'], sfdcCreds['refresh_token'], sfdcCreds['domain'],  usr=sfdcCreds['username'], aud=sfdcCreds['audience'], at=sfdcCreds['authflow'], key=sfdcPKey)
+
+        for mail in todaysMail['mail']:
+            r = USPS.download_image(sesh, mail['image'])
+
+            mailId = SFDC.new_mail_item(sfdc_sesh, mail)
+            SFDC.upload_mail_image(sfdc_sesh, mail, mailId, r.content)
+
+        if (todaysMail['mail_count'] + todaysMail['package_count']) > 0:
+            note = ''
+
+            if todaysMail['mail_count'] > 0:
+                note = note + str(todaysMail['mail_count']) + ' mail delivering today. '
+
+            if todaysMail['today_package_count'] > 0:
+                note = note + str(todaysMail['today_package_count']) + ' packages delivering today. '
+
+            if todaysMail['package_count'] != todaysMail['today_package_count']:
+                note = note + str(todaysMail['package_count']) + ' total packages incoming. '
+                    
+            SFDC.send_notification(sfdc_sesh, note)
+
+            return note
+        else:
+            SFDC.send_notification(sfdc_sesh, "No activity today")
+            return('no mail')
+    else:
+        return ('', 204)
+
+###############################################
+### Command Override for Blinds Switch Sync ###
+###############################################
+
+@app.route('/override_sync', methods=['GET'])
+def override_sync():
+    if request.method == 'GET':
+
+        db_session = db_connect()
+        db_session.updateSetting(str(request.args.get('state')), 'commandOverride')
+
+        result = {
+                'status':'success'
+            }
+
+        return json.dumps(result)
+    else:
+        return ('', 204)
 
 #################################################
 ### Controls the blinds based on sun position ###
@@ -377,6 +396,20 @@ def saveSettingVals():
         cur.execute('UPDATE settings SET value = ?, last_modified = datetime(\'now\') WHERE name = ?', (payload[setting], setting))
         con.commit()
 
+    with open(hbAuthFile) as f:
+        hbCreds = json.loads(f.read())
+
+    # set the commandOverride switch status
+    thisExec = hbCliHelper.cliExecutor()
+
+    hb_auth_payload = hb_authorize(hbCreds['host'], hbCreds['port'], hbCreds['username'], hbCreds['password'],None,hbCreds['secure'])
+    authResult = thisExec.authorize(hb_auth_payload)
+
+    # TODO: Need to make the switch name configurable
+    override_sync_payload = acc_char_data("Blinds Override", ["On",str(payload['commandOverride'])], authResult['sessionId'])
+    thisExec.setaccessorychar(override_sync_payload)
+
+    # set the interval in the current runtime
     ticktockJob['interval'] = int(payload['ticktockInterval'])
 
     con.close()
