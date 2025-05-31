@@ -66,6 +66,9 @@ class db_connect:
             condition = 'Clear'
             self.cur.execute('INSERT INTO conditionHistory (condition, timestamp) VALUES(?, datetime(\'now\'))', (condition,))
             self.con.commit()
+    
+    def disconnect(self):
+        self.con.close()
 
     def updateSetting(self, value, settingName):
         self.cur.execute('UPDATE settings SET value = ?, last_modified = datetime(\'now\') WHERE name = ?', (value, settingName))

@@ -155,6 +155,8 @@ def override_sync():
                 'status':'success'
             }
 
+        db_session.disconnect()
+
         return json.dumps(result)
     else:
         return ('', 204)
@@ -283,6 +285,7 @@ def sun_control():
                 
                     db_session.updateSetting('false','lastInArea')
 
+        db_session.disconnect()
         print(result)
         return json.dumps(result)
     else:
@@ -436,6 +439,8 @@ def getDistinctConditions():
     cur.execute('SELECT condition, blindsClosed FROM distinctConditions ORDER BY condition ASC')
     rs = cur.fetchall()
 
+    con.close()
+
     return json.dumps(rs)
 
 @app.route('/getTimeSinceLastCheck')
@@ -450,6 +455,8 @@ def getTimeSinceLastCheck():
     nowDate = datetime.datetime.strptime(rs[0][1], '%Y-%d-%m %H:%M:%S')
 
     difference = nowDate - newestDate
+
+    con.close();
 
     return json.dumps(difference.total_seconds())
 
