@@ -35,7 +35,7 @@ ticktockJob = {"status":"Stopped","job":None,"interval":30}
 ####################
 secrets = {}
 with open(hbAuthFile) as f:
-    secrets['hbcreds'] = json.loads(f.read())
+    secrets['hbCreds'] = json.loads(f.read())
 
 # TODO: other secrets
 
