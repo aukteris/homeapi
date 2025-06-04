@@ -30,6 +30,15 @@ lgAuthFile = "./secrets/lgtoken.json"
 
 ticktockJob = {"status":"Stopped","job":None,"interval":30}
 
+####################
+### Load Secrets ###
+####################
+secrets = {}
+with open(hbAuthFile) as f:
+    secrets['hbcreds'] = json.loads(f.read())
+
+# TODO: other secrets
+
 ####################################
 ### Front-end for homebridge API ###
 ####################################
@@ -399,13 +408,10 @@ def saveSettingVals():
         cur.execute('UPDATE settings SET value = ?, last_modified = datetime(\'now\') WHERE name = ?', (payload[setting], setting))
         con.commit()
 
-    with open(hbAuthFile) as f:
-        hbCreds = json.loads(f.read())
-
     # set the commandOverride switch status
     thisExec = hbCliHelper.cliExecutor()
 
-    hb_auth_payload = hb_authorize(hbCreds['host'], hbCreds['port'], hbCreds['username'], hbCreds['password'],None,hbCreds['secure'])
+    hb_auth_payload = hb_authorize(secrets['hbCreds']['host'], secrets['hbCreds']['port'], secrets['hbCreds']['username'], secrets['hbCreds']['password'],None,secrets['hbCreds']['secure'])
     authResult = thisExec.authorize(hb_auth_payload)
 
     # TODO: Need to make the switch name configurable
@@ -463,12 +469,9 @@ def getTimeSinceLastCheck():
 def ticktock():
     print("tick")
 
-    with open(hbAuthFile) as f:
-        hbCreds = json.loads(f.read())
-
     thisExec = hbCliHelper.cliExecutor()
 
-    hb_auth_payload = hb_authorize(hbCreds['host'], hbCreds['port'], hbCreds['username'], hbCreds['password'],None,hbCreds['secure'])
+    hb_auth_payload = hb_authorize(secrets['hbCreds']['host'], secrets['hbCreds']['port'], secrets['hbCreds']['username'], secrets['hbCreds']['password'],None,secrets['hbCreds']['secure'])
     authResult = thisExec.authorize(hb_auth_payload)
 
     tick_set_acc_char_payload = acc_char_data("Tick", ["On","1"], authResult['sessionId'])
