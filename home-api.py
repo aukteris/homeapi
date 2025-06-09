@@ -6,6 +6,7 @@ import pytz
 import sqlite3
 import importlib
 import os
+import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
 from noaa_sdk import NOAA
 from pywebostv.connection import WebOSClient
@@ -37,7 +38,7 @@ secrets = {}
 with open(hbAuthFile) as f:
     secrets['hbCreds'] = json.loads(f.read())
 
- with open(uspsAuthFile) as f:
+with open(uspsAuthFile) as f:
     secrets['uspsCreds'] = json.loads(f.read())
 
 with open(sfdcAuthFile) as f:
@@ -45,6 +46,12 @@ with open(sfdcAuthFile) as f:
 
 with open(sfdcPrivateKey) as f:
     secrets['sfdcPKey'] = f.read()
+
+###############################################
+### Initialize a single database connection ###
+###############################################
+
+db_session = db_connect()
 
 ####################################
 ### Front-end for homebridge API ###
@@ -154,15 +161,11 @@ def extract_ups():
 @app.route('/override_sync', methods=['GET'])
 def override_sync():
     if request.method == 'GET':
-
-        db_session = db_connect()
         db_session.updateSetting(str(request.args.get('state')), 'commandOverride')
 
         result = {
                 'status':'success'
             }
-
-        db_session.disconnect()
 
         return json.dumps(result)
     else:
@@ -175,7 +178,6 @@ def override_sync():
 @app.route('/sun_control', methods=['GET'])
 def sun_control():
     if request.method == 'GET':
-        db_session = db_connect()
         the_sun = sun_control_master()
         settings = db_session.getSettings()
 
@@ -292,7 +294,6 @@ def sun_control():
                 
                     db_session.updateSetting('false','lastInArea')
 
-        db_session.disconnect()
         print(result)
         return json.dumps(result)
     else:
@@ -365,11 +366,8 @@ def adminPanel():
 
 @app.route('/getSettingVals')
 def getSettingVals():
-    con = sqlite3.connect('persist.db')
-    cur = con.cursor()
-
-    cur.execute('SELECT name, value FROM settings')
-    rs = cur.fetchall()
+    db_session.cur.execute('SELECT name, value FROM settings')
+    rs = db_session.cur.fetchall()
     
     result = {}
     if len(rs) > 0:
@@ -380,8 +378,6 @@ def getSettingVals():
     ticktockJob['interval'] = int(result['ticktockInterval'])
 
     return json.dumps(result)
-
-    con.close()
 
 def is_float(string):
     try:
@@ -394,17 +390,14 @@ def is_float(string):
 def saveSettingVals():
     payload = json.loads(request.data)
 
-    con = sqlite3.connect('persist.db')
-    cur = con.cursor()
-
     for condition in payload['distinctConditions'].keys():
-        cur.execute('UPDATE distinctConditions SET blindsClosed = ? WHERE condition = ?', (payload['distinctConditions'][condition], condition))
+        db_session.cur.execute('UPDATE distinctConditions SET blindsClosed = ? WHERE condition = ?', (payload['distinctConditions'][condition], condition))
 
     payload.pop('distinctConditions')
 
     for setting in payload:
-        cur.execute('UPDATE settings SET value = ?, last_modified = datetime(\'now\') WHERE name = ?', (payload[setting], setting))
-        con.commit()
+        db_session.cur.execute('UPDATE settings SET value = ?, last_modified = datetime(\'now\') WHERE name = ?', (payload[setting], setting))
+        db_session.con.commit()
 
     # set the commandOverride switch status
     thisExec = hbCliHelper.cliExecutor()
@@ -419,48 +412,31 @@ def saveSettingVals():
     # set the interval in the current runtime
     ticktockJob['interval'] = int(payload['ticktockInterval'])
 
-    con.close()
-
     return "{\"status\":\"success\"}"
 
 @app.route('/getConditionHistory')
 def getConditionHistory():
-    con = sqlite3.connect('persist.db')
-    cur = con.cursor()
-
-    cur.execute('SELECT condition, timestamp FROM conditionHistory ORDER BY timestamp DESC')
-    rs = cur.fetchall()
-
-    con.close()
+    db_session.cur.execute('SELECT condition, timestamp FROM conditionHistory ORDER BY timestamp DESC')
+    rs = db_session.cur.fetchall()
 
     return json.dumps(rs)
 
 @app.route('/getDistinctConditions')
 def getDistinctConditions():
-    con = sqlite3.connect('persist.db')
-    cur = con.cursor()
-
-    cur.execute('SELECT condition, blindsClosed FROM distinctConditions ORDER BY condition ASC')
-    rs = cur.fetchall()
-
-    con.close()
+    db_session.cur.execute('SELECT condition, blindsClosed FROM distinctConditions ORDER BY condition ASC')
+    rs = db_session.cur.fetchall()
 
     return json.dumps(rs)
 
 @app.route('/getTimeSinceLastCheck')
 def getTimeSinceLastCheck():
-    con = sqlite3.connect('persist.db')
-    cur = con.cursor()
-
-    cur.execute('SELECT timestamp, datetime(\'now\') FROM conditionHistory ORDER BY timestamp DESC LIMIT 1')
-    rs = cur.fetchall()
+    db_session.cur.execute('SELECT timestamp, datetime(\'now\') FROM conditionHistory ORDER BY timestamp DESC LIMIT 1')
+    rs = db_session.cur.fetchall()
 
     newestDate = datetime.datetime.strptime(rs[0][0], '%Y-%d-%m %H:%M:%S')
     nowDate = datetime.datetime.strptime(rs[0][1], '%Y-%d-%m %H:%M:%S')
 
     difference = nowDate - newestDate
-
-    con.close();
 
     return json.dumps(difference.total_seconds())
 
@@ -507,3 +483,9 @@ def statusTicktock():
 
 if __name__ == "__main__":
     app.run(threaded=True)
+
+# Cleanup when the app terminates
+@atexit.register
+def on_terminate():
+    db_session.disconnect()
+    print("### Closed the DB Connection ###")
