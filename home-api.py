@@ -13,7 +13,8 @@ from pywebostv.connection import WebOSClient
 from pywebostv.controls import ApplicationControl
 
 from classes.usps_api_control import USPSApi, SFDCApi, USPSError, SFDCError
-from classes.sun_control import sun_control_master, db_connect
+from classes.db_connect import db_connect
+from classes.sun_control import sun_control_master
 from classes.hbapi_control import hb_authorize, acc_char_data
 
 hbCliHelper = importlib.import_module('homebridgeUIAPI-python.classes.cliHelper')
@@ -178,7 +179,7 @@ def override_sync():
 @app.route('/sun_control', methods=['GET'])
 def sun_control():
     if request.method == 'GET':
-        the_sun = sun_control_master()
+        the_sun = sun_control_master(db_session)
         settings = db_session.getSettings()
 
         #condition = db_session.topConditionFromHistory()
