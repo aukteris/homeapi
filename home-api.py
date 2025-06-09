@@ -37,7 +37,14 @@ secrets = {}
 with open(hbAuthFile) as f:
     secrets['hbCreds'] = json.loads(f.read())
 
-# TODO: other secrets
+ with open(uspsAuthFile) as f:
+    secrets['uspsCreds'] = json.loads(f.read())
+
+with open(sfdcAuthFile) as f:
+    secrets['sfdcCreds'] = json.loads(f.read())
+
+with open(sfdcPrivateKey) as f:
+    secrets['sfdcPKey'] = f.read()
 
 ####################################
 ### Front-end for homebridge API ###
@@ -104,23 +111,14 @@ def list_acc_chars():
 @app.route('/extract_usps', methods=['GET'])
 def extract_ups():
     if request.method == 'GET':
-        
-        with open(uspsAuthFile) as f:
-            uspsCreds = json.loads(f.read())
-
-        with open(sfdcAuthFile) as f:
-            sfdcCreds = json.loads(f.read())
-        
-        with open(sfdcPrivateKey) as f:
-            sfdcPKey = f.read()
 
         USPS = USPSApi()
-        sesh = USPS.start_session(uspsCreds['username'], uspsCreds['password'])
+        sesh = USPS.start_session(secrets['uspsCreds']['username'], secrets['uspsCreds']['password'])
         #date = datetime.date(2022, 7, 26)
         todaysMail = USPS.get_mail(sesh)
 
         SFDC = SFDCApi()
-        sfdc_sesh = SFDC.get_sfdc_session(sfdcCreds['client_id'], sfdcCreds['client_secret'], sfdcCreds['refresh_token'], sfdcCreds['domain'],  usr=sfdcCreds['username'], aud=sfdcCreds['audience'], at=sfdcCreds['authflow'], key=sfdcPKey)
+        sfdc_sesh = SFDC.get_sfdc_session(secrets['sfdcCreds']['client_id'], secrets['sfdcCreds']['client_secret'], secrets['sfdcCreds']['refresh_token'], secrets['sfdcCreds']['domain'],  usr=secrets['sfdcCreds']['username'], aud=secrets['sfdcCreds']['audience'], at=secrets['sfdcCreds']['authflow'], key=secrets['sfdcPKey'])
 
         for mail in todaysMail['mail']:
             r = USPS.download_image(sesh, mail['image'])
@@ -378,12 +376,12 @@ def getSettingVals():
         for r in rs:
             result[r[0]] = int(r[1]) if r[1].isdigit() else float(r[1]) if is_float(r[1]) else r[1]
 
-    con.close()
-
     # blatant hack to load the refresh interval to memory from the database
     ticktockJob['interval'] = int(result['ticktockInterval'])
 
     return json.dumps(result)
+
+    con.close()
 
 def is_float(string):
     try:
