@@ -7,13 +7,14 @@ import sqlite3
 import importlib
 import os
 import atexit
+import socket
 from apscheduler.schedulers.background import BackgroundScheduler
 from noaa_sdk import NOAA
 from pywebostv.connection import WebOSClient
 from pywebostv.controls import ApplicationControl
 
-from classes.usps_api_control import USPSApi, SFDCApi, USPSError, SFDCError
 from classes.db_connect import db_connect
+from classes.usps_api_control import USPSApi, SFDCApi, USPSError, SFDCError
 from classes.sun_control import sun_control_master
 from classes.hbapi_control import hb_authorize, acc_char_data
 
@@ -314,44 +315,51 @@ def console_light():
                 store = json.load(readfile)
 
         registered = False
+        result = {}
 
-        client = WebOSClient('LGwebOSTV.dankurtz.local', secure=True)
-        client.connect()
-        for status in client.register(store):
-            if status == WebOSClient.PROMPTED:
-                print("Please accept the connect on the TV!")
-            elif status == WebOSClient.REGISTERED:
-                print("Registration successful!")
-                registered = True
-        
-        # save store to file
-        with open(lgAuthFile, 'w') as outfile:
-            json.dump(store, outfile)
-
-        result = {'status':'Not Registered'}
-
-        if registered:
-        
-            # connect to DB and get ready for queries
-            # con = sqlite3.connect('persist.db')
-            # cur = con.cursor()
+        try:
+            socket.gethostbyname('LGwebOSTV.dankurtz.local')
+            client = WebOSClient('LGwebOSTV.dankurtz.local', secure=True)
+            client.connect()
+            for status in client.register(store):
+                if status == WebOSClient.PROMPTED:
+                    print("Please accept the connect on the TV!")
+                elif status == WebOSClient.REGISTERED:
+                    print("Registration successful!")
+                    registered = True
             
-            # tv_aid = request.args.get('tv_aid')
+            # save store to file
+            with open(lgAuthFile, 'w') as outfile:
+                json.dump(store, outfile)
 
-            app = ApplicationControl(client)
-            tv_aid = app.get_current()
+            result = {'status':'Not Registered'}
 
-            tvIdMap = {
-                "com.webos.app.hdmi3":"ColorPC",
-                "com.webos.app.hdmi1":"ColorAppleTV",
-                "com.webos.app.hdmi4":"ColorPS4",
-                "com.webos.app.hdmi5":"ColorNintendo"
-            }
+            if registered:
+            
+                # connect to DB and get ready for queries
+                # con = sqlite3.connect('persist.db')
+                # cur = con.cursor()
+                
+                # tv_aid = request.args.get('tv_aid')
 
-            result = {
-                'status':'success',
-                'commands':[tvIdMap[tv_aid]]
-            }
+                app = ApplicationControl(client)
+                tv_aid = app.get_current()
+
+                tvIdMap = {
+                    "com.webos.app.hdmi3":"ColorPC",
+                    "com.webos.app.hdmi1":"ColorAppleTV",
+                    "com.webos.app.hdmi4":"ColorPS4",
+                    "com.webos.app.hdmi5":"ColorNintendo"
+                }
+
+                result = {
+                    'status':'success',
+                    'commands':[tvIdMap[tv_aid]]
+                }
+
+                client.close()
+        except:
+            result = {'status':'Error','message':'Could not connect to TV'}
 
         return json.dumps(result)
     else:
@@ -490,3 +498,5 @@ if __name__ == "__main__":
 def on_terminate():
     db_session.disconnect()
     print("### Closed the DB Connection ###")
+
+#startTicktock()
